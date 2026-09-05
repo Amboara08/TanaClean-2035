@@ -1,0 +1,68 @@
+<%
+  const statusLabel = { planned:'Planifié', active:'En cours', done:'Complété', cancelled:'Annulé' };
+  const statusLoz   = { planned:'lozenge-default', active:'lozenge-warning', done:'lozenge-success', cancelled:'lozenge-danger' };
+%>
+<div id="tours-today" class="panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Mes tournées du jour</h2>
+    <a href="/worker/schedule" class="btn btn-subtle btn-sm">Planning complet</a>
+  </div>
+  <div class="panel-body" style="padding:0">
+    <% if (myTours.length === 0) { %>
+    <p style="padding:var(--sp-5);color:var(--color-text-subtle);text-align:center">
+      Aucune tournée assignée aujourd'hui.
+    </p>
+    <% } else { %>
+    <table class="aui-table">
+      <thead>
+        <tr>
+          <th>Heure</th><th>Quartier</th><th>Priorité</th><th>Note</th><th>Statut</th><th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% myTours.forEach(function(t) { %>
+        <tr>
+          <td class="text-sm"><strong><%= t.scheduled_at.slice(11,16) %></strong></td>
+          <td><%= t.district_name %></td>
+          <td>
+            <% if (t.priority === 3) { %>
+              <span class="lozenge lozenge-danger">Haute</span>
+            <% } else if (t.priority === 2) { %>
+              <span class="lozenge lozenge-warning">Normale</span>
+            <% } else { %>
+              <span class="lozenge lozenge-default">Basse</span>
+            <% } %>
+          </td>
+          <td class="text-subtle text-sm"><%= t.note || '—' %></td>
+          <td><span class="lozenge <%= statusLoz[t.status] %>"><%= statusLabel[t.status] %></span></td>
+          <td style="white-space:nowrap">
+            <% if (t.status === 'planned') { %>
+            <button class="btn btn-primary btn-sm"
+                    hx-post="/worker/schedule/<%= t.id %>/status"
+                    hx-vals='{"status":"active"}'
+                    hx-target="#tours-today"
+                    hx-swap="outerHTML"
+                    hx-indicator=".htmx-indicator">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="currentColor" style="margin-right:4px"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+              Démarrer
+            </button>
+            <% } else if (t.status === 'active') { %>
+            <button class="btn btn-sm"
+                    style="background:var(--color-success);color:#fff;border-color:var(--color-success)"
+                    hx-post="/worker/schedule/<%= t.id %>/status"
+                    hx-vals='{"status":"done"}'
+                    hx-target="#tours-today"
+                    hx-swap="outerHTML"
+                    hx-indicator=".htmx-indicator">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right:4px"><polyline points="20 6 9 17 4 12"/></svg>
+              Terminer
+            </button>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <% } %>
+  </div>
+</div>

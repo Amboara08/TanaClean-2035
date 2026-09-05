@@ -1,0 +1,28 @@
+<div class="panel-header">
+  <h2 class="panel-title">Notifications</h2>
+  <% if (notifications.length > 0) { %>
+  <form action="/citizen/notifications/read-all" method="POST">
+    <button type="submit" class="btn btn-link btn-sm">Tout marquer lu</button>
+  </form>
+  <% } %>
+</div>
+<div class="panel-body" style="padding:0">
+  <% if (notifications.length === 0) { %>
+  <p style="padding:var(--sp-5);color:var(--color-text-subtle);text-align:center">Aucune notification.</p>
+  <% } else { %>
+  <ul style="list-style:none">
+    <% notifications.forEach(n => { %>
+    <li style="display:flex;align-items:flex-start;gap:var(--sp-3);padding:var(--sp-3) var(--sp-4);border-bottom:1px solid var(--color-border);background:<%= n.is_read ? 'transparent' : 'var(--color-brand-subtle)' %>">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="<%= n.is_read ? 'var(--color-text-subtle)' : 'var(--color-brand)' %>" stroke-width="2" style="flex-shrink:0;margin-top:2px"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
+      <div style="flex:1">
+        <p style="font-size:var(--text-base);color:<%= n.is_read ? 'var(--color-text-subtle)' : 'var(--color-text)' %>"><%= n.message %></p>
+        <p class="text-sm text-subtle" style="margin-top:2px"><%= n.created_at.slice(0,16).replace('T',' ') %></p>
+      </div>
+      <% if (!n.is_read) { %>
+      <span style="width:8px;height:8px;border-radius:50%;background:var(--color-brand);flex-shrink:0;margin-top:6px"></span>
+      <% } %>
+    </li>
+    <% }) %>
+  </ul>
+  <% } %>
+</div>

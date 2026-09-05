@@ -1,0 +1,154 @@
+<p class="page-subtitle">Journal complet des actions effectuées sur la plateforme.</p>
+
+<!-- Filtres -->
+<form method="GET" action="/admin/historique"
+      style="display:flex;gap:var(--sp-3);align-items:flex-end;flex-wrap:wrap;margin-bottom:var(--sp-4)">
+
+  <div>
+    <label class="form-label">Table</label>
+    <select name="table" class="form-select" style="width:150px">
+      <option value="">Toutes</option>
+      <% tables.forEach(function(t) { %>
+      <option value="<%= t %>" <%= table_name === t ? 'selected' : '' %>><%= t %></option>
+      <% }) %>
+    </select>
+  </div>
+
+  <div>
+    <label class="form-label">Action</label>
+    <select name="action" class="form-select" style="width:140px">
+      <option value="">Toutes</option>
+      <option value="create"  <%= action === 'create'  ? 'selected' : '' %>>Création</option>
+      <option value="update"  <%= action === 'update'  ? 'selected' : '' %>>Modification</option>
+      <option value="delete"  <%= action === 'delete'  ? 'selected' : '' %>>Suppression</option>
+    </select>
+  </div>
+
+  <div>
+    <label class="form-label">Du</label>
+    <input type="date" name="date_from" class="form-input" style="width:150px"
+           value="<%= date_from || '' %>">
+  </div>
+
+  <div>
+    <label class="form-label">Au</label>
+    <input type="date" name="date_to" class="form-input" style="width:150px"
+           value="<%= date_to || '' %>">
+  </div>
+
+  <div style="display:flex;gap:var(--sp-2);align-items:flex-end">
+    <button type="submit" class="btn btn-secondary">Filtrer</button>
+    <% if (table_name || action || date_from || date_to) { %>
+    <a href="/admin/historique" class="btn btn-link">Réinitialiser</a>
+    <% } %>
+  </div>
+
+  <span style="margin-left:auto;font-size:var(--text-sm);color:var(--color-text-subtle);align-self:center">
+    <%= total %> entrée<%= total > 1 ? 's' : '' %>
+  </span>
+</form>
+
+<div class="panel">
+  <div class="table-scroll" style="padding:0">
+    <table class="aui-table">
+      <thead>
+        <tr>
+          <th style="width:160px">Date / Heure</th>
+          <th style="width:110px">Table</th>
+          <th style="width:60px">ID</th>
+          <th style="width:110px">Action</th>
+          <th>Détails</th>
+          <th style="width:140px">Par</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (!entries.length) { %>
+        <tr>
+          <td colspan="6" style="text-align:center;color:var(--color-text-subtle);padding:var(--sp-8)">
+            Aucune entrée dans l'historique.
+          </td>
+        </tr>
+        <% } %>
+        <% entries.forEach(function(e) { %>
+        <tr>
+          <td style="font-size:var(--text-sm);color:var(--color-text-subtle);white-space:nowrap">
+            <%= new Date(e.changed_at).toLocaleDateString('fr-FR', {
+              day:'2-digit', month:'2-digit', year:'numeric',
+              hour:'2-digit', minute:'2-digit', second:'2-digit'
+            }) %>
+          </td>
+          <td>
+            <code style="font-size:11px;background:var(--color-bg);padding:2px 6px;border-radius:3px;border:1px solid var(--color-border)">
+              <%= e.table_name %>
+            </code>
+          </td>
+          <td style="color:var(--color-text-subtle);font-size:var(--text-sm)">#<%= e.record_id %></td>
+          <td>
+            <% if (e.action === 'create') { %>
+            <span class="lozenge lozenge-success">Création</span>
+            <% } else if (e.action === 'update') { %>
+            <span class="lozenge lozenge-warning">Modification</span>
+            <% } else { %>
+            <span class="lozenge lozenge-danger">Suppression</span>
+            <% } %>
+          </td>
+          <td style="font-size:var(--text-sm)"><%
+            var _L = { worker:'Éboueur', district:'Quartier', scheduled_at:'Planifié le',
+                       status:'Statut', plate:'Immatriculation', capacity_t:'Capacité (t)',
+                       name:'Nom', priority:'Priorité', content:'Contenu',
+                       is_urgent:'Urgent', worker_name:'Éboueur' };
+            function _lbl(k){ return _L[k] || k; }
+            function _fmt(k,v){
+              if (v === null || v === undefined) return '—';
+              if (k === 'scheduled_at'){ var d=new Date(v); return isNaN(d)?v:d.toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}); }
+              if (k === 'is_urgent') return v ? 'Oui' : 'Non';
+              if (k === 'status'){ var m={planned:'Planifié',active:'En cours',done:'Terminé',cancelled:'Annulé',open:'Ouvert',processing:'En traitement',closed:'Fermé',available:'Disponible',in_use:'En service',maintenance:'Maintenance'}; return m[v]||v; }
+              return String(v);
+            }
+            /* MySQL2 retourne les colonnes JSON déjà parsées en objets */
+            function _obj(v){ if (!v) return {}; if (typeof v === 'object') return v; try { return JSON.parse(v); } catch(_){ return {}; } }
+
+            var _oldV = _obj(e.old_value);
+            var _newV = _obj(e.new_value);
+
+            if (e.action === 'update') {
+              var _changed = Object.keys(_newV).filter(function(k){ return String(_oldV[k]) !== String(_newV[k]); });
+              if (!_changed.length) _changed = Object.keys(_newV);
+              _changed.forEach(function(k){
+                %><span style="color:var(--color-text-subtle);margin-right:3px"><%=_lbl(k)%> :</span><%
+                if (_oldV[k] !== undefined && _oldV[k] !== null && String(_oldV[k]) !== String(_newV[k])) {
+                  %><span style="text-decoration:line-through;color:var(--color-danger);margin-right:4px"><%=_fmt(k,_oldV[k])%></span><%
+                }
+                %><span style="color:var(--color-success);font-weight:600;margin-right:10px"><%=_fmt(k,_newV[k])%></span><%
+              });
+            } else {
+              var _vals = e.action === 'delete' ? _oldV : _newV;
+              var _vkeys = Object.keys(_vals);
+              if (_vkeys.length) {
+                _vkeys.forEach(function(k,i){
+                  %><span style="color:var(--color-text-subtle);margin-right:3px"><%=_lbl(k)%> :</span><span style="font-weight:500;margin-right:10px"><%=_fmt(k,_vals[k])%></span><%
+                });
+              } else {
+                %>—<%
+              }
+            }
+          %></td>
+          <td style="font-size:var(--text-sm)">
+            <% if (e.changed_by_name) { %>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 style="vertical-align:middle;margin-right:4px;color:var(--color-text-subtle)">
+              <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+            </svg>
+            <%= e.changed_by_name %>
+            <% } else { %>
+            <span style="color:var(--color-text-subtle)">—</span>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+</div>
+
+<%- include('../partials/pagination', { currentPage, totalPages, total, baseParams }) %>

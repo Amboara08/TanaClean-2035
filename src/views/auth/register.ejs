@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Créer un compte — TanaClean 2035</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div class="auth-page">
+  <div class="auth-card" style="max-width:420px">
+
+    <div class="auth-logo">
+      <svg width="80" height="52" viewBox="0 0 34 22" fill="none" xmlns="http://www.w3.org/2000/svg" style="display:block;margin:0 auto 14px">
+        <rect x="0.5" y="1.5" width="17" height="11" rx="2" fill="var(--color-brand)"/>
+        <rect x="13.5" y="1.5" width="4" height="11" rx="1" fill="var(--color-brand-hover)" fill-opacity="0.7"/>
+        <path d="M17.5 3 L17.5 12.5 L33.5 12.5 L33.5 9 L29 1.5 L17.5 1.5 Z" fill="var(--color-brand)"/>
+        <path d="M19 2.5 L27.5 2.5 L30.5 7.5 L19 7.5 Z" fill="white" fill-opacity="0.35"/>
+        <circle cx="6" cy="16" r="4" fill="#07201A"/>
+        <circle cx="25.5" cy="16" r="4" fill="#07201A"/>
+        <circle cx="6" cy="16" r="1.8" fill="white" fill-opacity="0.3"/>
+        <circle cx="25.5" cy="16" r="1.8" fill="white" fill-opacity="0.3"/>
+      </svg>
+      <div class="auth-logo-text">TanaClean 2035</div>
+      <div class="auth-logo-sub">Créer un compte citoyen</div>
+    </div>
+
+    <h2 class="auth-title">Inscription</h2>
+
+    <% if (error) { %>
+    <div class="alert alert-error" style="margin-bottom:var(--sp-4)">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+      <%= error %>
+    </div>
+    <% } %>
+
+    <form action="/register" method="POST">
+
+      <div class="form-group">
+        <label for="name" class="form-label">Nom complet</label>
+        <input type="text" id="name" name="name" class="form-input"
+          placeholder="Votre prénom et nom" autocomplete="name" required>
+      </div>
+
+      <div class="form-group">
+        <label for="email" class="form-label">Adresse e-mail</label>
+        <input type="email" id="email" name="email" class="form-input"
+          placeholder="vous@exemple.com" autocomplete="email" required>
+      </div>
+
+      <div class="form-group">
+        <label for="district_id" class="form-label">Votre quartier</label>
+        <select id="district_id" name="district_id" class="form-select" required>
+          <option value="">Sélectionner votre quartier…</option>
+          <% districts.forEach(d => { %>
+          <option value="<%= d.id %>"><%= d.name %></option>
+          <% }) %>
+        </select>
+        <p class="form-hint">Vous recevrez les notifications de collecte pour ce quartier.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="password" class="form-label">Mot de passe</label>
+        <input type="password" id="password" name="password" class="form-input"
+          placeholder="••••••••" autocomplete="new-password" minlength="6" required>
+        <p class="form-hint">Au moins 6 caractères.</p>
+      </div>
+
+      <div class="form-group">
+        <label for="password_confirm" class="form-label">Confirmer le mot de passe</label>
+        <input type="password" id="password_confirm" name="password_confirm" class="form-input"
+          placeholder="••••••••" autocomplete="new-password" minlength="6" required>
+      </div>
+
+      <button type="submit" class="btn btn-primary w-full" style="justify-content:center;padding:10px;margin-top:var(--sp-2)">
+        Créer mon compte
+      </button>
+    </form>
+
+    <p style="margin-top:var(--sp-5);text-align:center;font-size:var(--text-sm);color:var(--color-text-subtle)">
+      Vous avez déjà un compte ?
+      <a href="/login" style="color:var(--color-brand);text-decoration:none;font-weight:600">Se connecter</a>
+    </p>
+
+  </div>
+</div>
+</body>
+</html>

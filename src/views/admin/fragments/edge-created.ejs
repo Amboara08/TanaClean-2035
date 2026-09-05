@@ -1,0 +1,20 @@
+<%# Données de la liaison lues par le JS Leaflet %>
+<div id="new-edge-data"
+     data-from-id="<%= from.id %>"
+     data-from-name="<%= from.name %>"
+     data-to-id="<%= to.id %>"
+     data-to-name="<%= to.name %>"
+     data-distance="<%= distance %>"
+     style="display:none"></div>
+
+<div style="padding:var(--sp-3);background:#EFF8F5;border-left:3px solid #0B7A68;
+            border-radius:var(--radius-md);font-size:var(--text-sm);color:#0B7A68;
+            display:flex;align-items:center;gap:var(--sp-3)">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="flex-shrink:0">
+    <polyline points="20 6 9 17 4 12"/>
+  </svg>
+  <div>
+    Liaison <strong><%= from.name %></strong> ↔ <strong><%= to.name %></strong>
+    · <strong><%= distance %> km</strong> créée
+  </div>
+</div>

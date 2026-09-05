@@ -1,0 +1,76 @@
+<%# Données du chemin lues par le JS Leaflet pour mise en évidence sur la carte %>
+<div id="path-data"
+     data-ids="<%= JSON.stringify(result ? result.path.map(function(n){ return n.id; }) : []) %>"
+     style="display:none"></div>
+
+<% if (error) { %>
+<div class="alert alert-danger" style="display:flex;align-items:center;gap:var(--sp-3)">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0">
+    <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+  <%= error %>
+</div>
+
+<% } else if (result) { %>
+<div class="panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Résultat Dijkstra</h2>
+    <span class="lozenge lozenge-success"><%= result.distance %> km</span>
+  </div>
+  <div class="panel-body">
+
+    <!-- En-tête itinéraire -->
+    <div style="display:flex;align-items:center;gap:var(--sp-3);margin-bottom:var(--sp-4)">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0B7A68" stroke-width="2">
+        <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+      </svg>
+      <div>
+        <div style="font-size:var(--text-md);font-weight:700;color:var(--color-text)">
+          <%= result.from %> → <%= result.to %>
+        </div>
+        <div style="font-size:var(--text-sm);color:var(--color-text-subtle)">
+          Distance optimale : <strong><%= result.distance %> km</strong> · <%= result.path.length - 1 %> étape(s)
+        </div>
+      </div>
+    </div>
+
+    <!-- Chemin pas à pas -->
+    <div style="display:flex;flex-wrap:wrap;align-items:center;gap:var(--sp-2)">
+      <% result.path.forEach(function(node, i) {
+        const isFirst = i === 0;
+        const isLast  = i === result.path.length - 1;
+        const bg  = isFirst ? '#DFFAEA' : isLast ? '#FFEBE6' : '#DEF0ED';
+        const bd  = isFirst ? '#00875A' : isLast ? '#C4382B' : '#0B7A68';
+        const tx  = isFirst ? '#005934' : isLast ? '#8B1A0A' : '#0B7A68';
+      %>
+      <div style="display:flex;align-items:center;gap:var(--sp-2)">
+        <div style="background:<%= bg %>;border:2px solid <%= bd %>;border-radius:50%;
+                    width:34px;height:34px;display:flex;align-items:center;justify-content:center;
+                    font-weight:700;font-size:var(--text-sm);color:<%= tx %>">
+          <%= i + 1 %>
+        </div>
+        <span style="font-size:11px;max-width:75px;text-align:center;line-height:1.3;color:var(--color-text)">
+          <%= node.name %>
+        </span>
+      </div>
+      <% if (i < result.path.length - 1) { %>
+      <svg width="16" height="12" viewBox="0 0 20 12" fill="none" stroke="var(--color-text-subtle)" stroke-width="2">
+        <line x1="0" y1="6" x2="16" y2="6"/><polyline points="10 1 16 6 10 11"/>
+      </svg>
+      <% } %>
+      <% }) %>
+    </div>
+
+    <!-- Note algorithme -->
+    <div style="margin-top:var(--sp-4);padding:var(--sp-3);background:#EFF8F5;
+                border-left:3px solid #0B7A68;border-radius:var(--radius-md);
+                font-size:var(--text-sm);color:#0B7A68">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           style="vertical-align:middle;margin-right:4px">
+        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
+      </svg>
+      Dijkstra · min-heap O((V+E) log V) · chemin tracé sur la carte
+    </div>
+  </div>
+</div>
+<% } %>

@@ -1,0 +1,80 @@
+<%
+  const statusLabel = { planned:'Planifié', active:'En cours', done:'Complété', cancelled:'Annulé' };
+  const statusLoz   = { planned:'lozenge-default', active:'lozenge-warning', done:'lozenge-success', cancelled:'lozenge-danger' };
+%>
+
+<div class="panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Historique de mes tournées</h2>
+    <span class="lozenge lozenge-info"><%= total %> tournée<%= total > 1 ? 's' : '' %></span>
+  </div>
+  <div class="table-scroll" style="padding:0">
+    <table class="aui-table">
+      <thead>
+        <tr>
+          <th>Date / Heure</th>
+          <th>Quartier</th>
+          <th>Priorité</th>
+          <th>Camion</th>
+          <th>Remplissage</th>
+          <th>Note</th>
+          <th>Statut</th>
+          <th></th>
+        </tr>
+      </thead>
+      <tbody>
+        <% if (tours.length === 0) { %>
+        <tr><td colspan="8" style="text-align:center;color:var(--color-text-subtle);padding:var(--sp-5)">Aucune tournée.</td></tr>
+        <% } %>
+        <% tours.forEach(function(t) { %>
+        <tr>
+          <td class="text-sm"><strong><%= t.scheduled_at.slice(0,16).replace('T',' ') %></strong></td>
+          <td><%= t.district_name %></td>
+          <td>
+            <% if (t.priority === 3) { %>
+              <span class="lozenge lozenge-danger">Haute</span>
+            <% } else if (t.priority === 2) { %>
+              <span class="lozenge lozenge-warning">Normale</span>
+            <% } else { %>
+              <span class="lozenge lozenge-default">Basse</span>
+            <% } %>
+          </td>
+          <td><code style="font-family:var(--font-mono);font-size:var(--text-sm)"><%= t.truck_plate %></code></td>
+          <td style="min-width:110px">
+            <div style="display:flex;align-items:center;gap:var(--sp-2)">
+              <div class="progress-bar" style="flex:1">
+                <div class="progress-fill <%= t.fill_pct >= 90 ? 'full' : t.fill_pct >= 70 ? 'warn' : '' %>"
+                     style="width:<%= t.fill_pct %>%"></div>
+              </div>
+              <span class="text-sm text-subtle"><%= t.fill_pct %>%</span>
+            </div>
+          </td>
+          <td class="text-subtle text-sm"><%= t.note || '—' %></td>
+          <td><span class="lozenge <%= statusLoz[t.status] %>"><%= statusLabel[t.status] %></span></td>
+          <td style="white-space:nowrap">
+            <% if (t.status === 'planned') { %>
+            <form action="/worker/schedule/<%= t.id %>/status" method="POST" style="display:inline">
+              <input type="hidden" name="status" value="active">
+              <button type="submit" class="btn btn-primary btn-sm">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="currentColor" style="margin-right:3px"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Démarrer
+              </button>
+            </form>
+            <% } else if (t.status === 'active') { %>
+            <form action="/worker/schedule/<%= t.id %>/status" method="POST" style="display:inline">
+              <input type="hidden" name="status" value="done">
+              <button type="submit" class="btn btn-sm"
+                      style="background:var(--color-success);color:#fff;border-color:var(--color-success)">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" style="margin-right:3px"><polyline points="20 6 9 17 4 12"/></svg>
+                Terminer
+              </button>
+            </form>
+            <% } %>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <%- include('../partials/pagination', { currentPage, totalPages, total, baseParams }) %>
+  </div>
+</div>

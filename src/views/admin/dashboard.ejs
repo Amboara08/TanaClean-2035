@@ -1,0 +1,119 @@
+<%
+  // Helpers injectés par la route
+  const statusLabel = { planned:'Planifié', active:'En cours', done:'Complété', cancelled:'Annulé' };
+  const statusLoz   = { planned:'lozenge-default', active:'lozenge-warning', done:'lozenge-success', cancelled:'lozenge-danger' };
+%>
+
+<!-- Stat cards -->
+<div class="stat-grid">
+  <div class="stat-card">
+    <svg class="stat-card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <div class="stat-card-label">Éboueurs actifs</div>
+    <div class="stat-card-value"><%= stats.activeWorkers %></div>
+    <div class="stat-card-sub">sur <%= stats.totalWorkers %> au total</div>
+  </div>
+
+  <div class="stat-card">
+    <svg class="stat-card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+    <div class="stat-card-label">Camions disponibles</div>
+    <div class="stat-card-value"><%= stats.availableTrucks %></div>
+    <div class="stat-card-sub"><%= stats.inUseTrucks %> en service · <%= stats.maintenanceTrucks %> en maintenance</div>
+  </div>
+
+  <div class="stat-card">
+    <svg class="stat-card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <div class="stat-card-label">Tournées aujourd'hui</div>
+    <div class="stat-card-value"><%= stats.toursToday %></div>
+    <div class="stat-card-sub"><%= stats.activeTours %> en cours</div>
+  </div>
+
+  <div class="stat-card">
+    <svg class="stat-card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <div class="stat-card-label">Réclamations ouvertes</div>
+    <div class="stat-card-value"><%= stats.openComplaints %></div>
+    <div class="stat-card-sub"><%= stats.urgentComplaints %> urgente<%= stats.urgentComplaints > 1 ? 's' : '' %></div>
+  </div>
+</div>
+
+<!-- Planning du jour -->
+<div class="panel mb-6">
+  <div class="panel-header">
+    <h2 class="panel-title">Planning du jour</h2>
+    <a href="/admin/planning" class="btn btn-subtle btn-sm">Voir tout</a>
+  </div>
+  <div class="panel-body table-scroll" style="padding:0">
+    <% if (toursToday.length === 0) { %>
+    <p style="padding:var(--sp-5);color:var(--color-text-subtle);text-align:center">Aucune tournée planifiée aujourd'hui.</p>
+    <% } else { %>
+    <table class="aui-table">
+      <thead>
+        <tr>
+          <th>Éboueur</th>
+          <th>Quartier</th>
+          <th>Priorité</th>
+          <th>Camion</th>
+          <th>Heure</th>
+          <th>Statut</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% toursToday.forEach(t => { %>
+        <tr>
+          <td><strong><%= t.worker_name %></strong></td>
+          <td><%= t.district_name %></td>
+          <td>
+            <% if (t.priority === 3) { %>
+            <span class="lozenge lozenge-danger">Haute</span>
+            <% } else if (t.priority === 2) { %>
+            <span class="lozenge lozenge-warning">Normale</span>
+            <% } else { %>
+            <span class="lozenge lozenge-default">Basse</span>
+            <% } %>
+          </td>
+          <td><code style="font-family:var(--font-mono);font-size:var(--text-sm)"><%= t.truck_plate %></code></td>
+          <td class="text-subtle text-sm"><%= t.scheduled_at.slice(11,16) %></td>
+          <td><span class="lozenge <%= statusLoz[t.status] %>"><%= statusLabel[t.status] %></span></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <% } %>
+  </div>
+</div>
+
+<!-- Réclamations récentes -->
+<div class="panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Réclamations récentes</h2>
+    <a href="/admin/complaints" class="btn btn-subtle btn-sm">Voir tout</a>
+  </div>
+  <div class="panel-body table-scroll" style="padding:0">
+    <% if (recentComplaints.length === 0) { %>
+    <p style="padding:var(--sp-5);color:var(--color-text-subtle);text-align:center">Aucune réclamation.</p>
+    <% } else { %>
+    <table class="aui-table">
+      <thead>
+        <tr><th>Citoyen</th><th>Quartier</th><th>Objet</th><th>Date</th><th>Statut</th></tr>
+      </thead>
+      <tbody>
+        <% recentComplaints.forEach(c => { %>
+        <tr>
+          <td><%= c.citizen_name %></td>
+          <td><%= c.district_name %></td>
+          <td>
+            <% if (c.is_urgent) { %><span class="lozenge lozenge-urgent" style="margin-right:4px">Urgent</span><% } %>
+            <%= c.content.length > 60 ? c.content.slice(0,60) + '…' : c.content %>
+          </td>
+          <td class="text-subtle text-sm"><%= c.created_at.slice(0,10) %></td>
+          <td>
+            <% const cl = { open:'lozenge-danger', processing:'lozenge-warning', closed:'lozenge-success' }; %>
+            <% const ct = { open:'Ouverte', processing:'En cours', closed:'Clôturée' }; %>
+            <span class="lozenge <%= cl[c.status] %>"><%= ct[c.status] %></span>
+          </td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+    <% } %>
+  </div>
+</div>

@@ -1,0 +1,30 @@
+<div style="max-width:520px">
+
+  <% if (success) { %>
+  <div class="alert alert-success mb-4">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>
+    Paramètres enregistrés avec succès.
+  </div>
+  <% } %>
+
+  <div class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Affichage des listes</h2>
+    </div>
+    <div class="panel-body">
+      <form action="/admin/settings" method="POST">
+        <div class="form-group">
+          <label class="form-label">Éléments par page</label>
+          <select name="page_size" class="form-select" style="max-width:200px">
+            <% [5, 10, 20, 50].forEach(function(n) { %>
+            <option value="<%= n %>" <%= currentPageSize == n ? 'selected' : '' %>><%= n %> éléments</option>
+            <% }) %>
+          </select>
+          <p class="form-hint">Nombre de lignes affichées dans tous les tableaux de l'application (planning, éboueurs, camions, réclamations).</p>
+        </div>
+        <button type="submit" class="btn btn-primary">Enregistrer</button>
+      </form>
+    </div>
+  </div>
+
+</div>

@@ -1,0 +1,53 @@
+<div class="drawer-header">
+  <div>
+    <p class="drawer-eyebrow">Éboueur</p>
+    <h2 class="drawer-title"><%= worker.name %></h2>
+  </div>
+  <button class="drawer-close" onclick="closeDrawer()" aria-label="Fermer">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+  </button>
+</div>
+
+<div class="drawer-body">
+  <% if (success) { %>
+  <div class="alert alert-success" style="margin-bottom:var(--sp-4)">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>
+    Informations mises à jour.
+  </div>
+  <% } %>
+
+  <div class="drawer-info-row">
+    <span class="drawer-info-label">Quartier de base</span>
+    <span><%= worker.district_name || '—' %></span>
+  </div>
+  <div class="drawer-info-row">
+    <span class="drawer-info-label">Inscrit le</span>
+    <span><%= worker.created_at.slice(0,10) %></span>
+  </div>
+
+  <div class="drawer-divider"></div>
+
+  <form hx-post="/admin/workers/<%= worker.id %>" hx-target="#drawer-content" hx-swap="innerHTML">
+    <div class="form-group">
+      <label class="form-label">Nom complet</label>
+      <input type="text" name="name" class="form-input" value="<%= worker.name %>" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Adresse e-mail</label>
+      <input type="email" name="email" class="form-input" value="<%= worker.email %>" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Quartier de base</label>
+      <select name="district_id" class="form-select">
+        <option value="">Aucun</option>
+        <% districts.forEach(d => { %>
+        <option value="<%= d.id %>" <%= d.id == worker.district_id ? 'selected' : '' %>><%= d.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="drawer-footer">
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+      <button type="button" class="btn btn-subtle" onclick="closeDrawer()">Annuler</button>
+    </div>
+  </form>
+</div>

@@ -1,0 +1,104 @@
+<%
+  const statusLabel = { planned:'Planifié', active:'En cours', done:'Complété', cancelled:'Annulé' };
+  const statusLoz   = { planned:'lozenge-default', active:'lozenge-warning', done:'lozenge-success', cancelled:'lozenge-danger' };
+%>
+<%- include('../partials/auto-open-drawer', { autoOpen, drawerUrl: '/admin/planning' }) %>
+
+<div class="page-2col">
+
+  <!-- Liste des tournées -->
+  <div>
+  <div class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Toutes les tournées</h2>
+      <button class="btn btn-subtle btn-sm"
+              hx-get="/admin/planning/optimize"
+              hx-target="#optimize-result"
+              hx-swap="innerHTML"
+              hx-indicator="#opt-spinner">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:4px"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+        Optimiser l'ordre
+        <span id="opt-spinner" class="htmx-indicator" style="margin-left:4px">…</span>
+      </button>
+    </div>
+    <div class="table-scroll" style="padding:0">
+      <table class="aui-table">
+        <thead>
+          <tr><th>Éboueur</th><th>Quartier</th><th>Camion</th><th>Date / Heure</th><th>Note</th><th>Statut</th></tr>
+        </thead>
+        <tbody>
+          <% if (tours.length === 0) { %>
+          <tr><td colspan="6" style="text-align:center;color:var(--color-text-subtle);padding:var(--sp-5)">Aucune tournée.</td></tr>
+          <% } %>
+          <% tours.forEach(t => { %>
+          <tr hx-get="/admin/planning/<%= t.id %>" hx-target="#drawer-content" hx-swap="innerHTML">
+            <td><strong><%= t.worker_name %></strong></td>
+            <td><%= t.district_name %>
+              <% if (t.priority === 3) { %> <span class="lozenge lozenge-danger" style="font-size:10px">Haute</span><% } %>
+            </td>
+            <td><code style="font-family:var(--font-mono);font-size:var(--text-sm)"><%= t.truck_plate %></code></td>
+            <td class="text-sm"><%= t.scheduled_at.slice(0,16).replace('T',' ') %></td>
+            <td class="text-subtle text-sm"><%= t.note || '—' %></td>
+            <td><span class="lozenge <%= statusLoz[t.status] %>"><%= statusLabel[t.status] %></span></td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <%- include('../partials/pagination', { currentPage, totalPages, total, baseParams }) %>
+    </div>
+  </div>
+
+  <!-- Résultat de l'optimisation glouton -->
+  <div id="optimize-result" style="margin-top:var(--sp-4)"></div>
+  </div>
+
+  <!-- Formulaire nouvelle tournée -->
+  <div class="panel add-fab-panel" id="addFabPanel" data-fab-label="Nouvelle tournée">
+    <div class="panel-header">
+      <h2 class="panel-title">Nouvelle tournée</h2>
+    </div>
+    <div class="panel-body">
+      <form action="/admin/planning" method="POST">
+        <div class="form-group">
+          <label class="form-label">Éboueur</label>
+          <select name="worker_id" class="form-select" required>
+            <option value="">Sélectionner…</option>
+            <% workers.forEach(w => { %>
+            <option value="<%= w.id %>"><%= w.name %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Camion</label>
+          <select name="truck_id" class="form-select" required>
+            <option value="">Sélectionner…</option>
+            <% trucks.forEach(t => { %>
+            <option value="<%= t.id %>"><%= t.plate %></option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Quartier</label>
+          <select name="district_id" class="form-select" required>
+            <option value="">Sélectionner…</option>
+            <% districts.forEach(d => { %>
+            <option value="<%= d.id %>"><%= d.name %> (<%= d.priority === 3 ? 'Haute' : d.priority === 2 ? 'Normale' : 'Basse' %>)</option>
+            <% }) %>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Date et heure</label>
+          <input type="datetime-local" name="scheduled_at" class="form-input" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Note <span class="text-subtle">(optionnel)</span></label>
+          <textarea name="note" class="form-textarea" rows="2" placeholder="Instructions particulières…"></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary w-full" style="justify-content:center">
+          Planifier la tournée
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>

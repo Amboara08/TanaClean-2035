@@ -1,0 +1,868 @@
+<!-- <p class="page-subtitle">Carte réelle des quartiers d'Antananarivo · calculez le plus court chemin avec Dijkstra.</p> -->
+
+<style>
+  @import url('https://unpkg.com/leaflet@1.9.4/dist/leaflet.css');
+  /* ── Marqueurs quartier ── */
+  .dist-marker {
+    width: 30px; height: 30px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 10px; font-weight: 800; border: 2.5px solid;
+    cursor: pointer;
+    transition: transform .25s, opacity .25s, box-shadow .25s;
+    box-shadow: 0 2px 6px rgba(0,0,0,.22);
+    font-family: system-ui, sans-serif;
+  }
+  .dist-p3 { background:#FFF0EE; border-color:#C4382B; color:#C4382B; }
+  .dist-p2 { background:#FFF8F0; border-color:#B86A0A; color:#B86A0A; }
+  .dist-p1 { background:#F0F5F3; border-color:#50706A; color:#50706A; }
+
+  /* ── États surlignés ── */
+  .dist-marker.hl-start { background:#DFFAEA !important; border-color:#00875A !important; color:#005934 !important; transform:scale(1.35); box-shadow:0 0 0 4px rgba(0,135,90,.25); }
+  .dist-marker.hl-end   { background:#FFEBE6 !important; border-color:#C4382B !important; color:#8B1A0A !important; transform:scale(1.35); box-shadow:0 0 0 4px rgba(196,56,43,.25); }
+  .dist-marker.hl-via   { background:#DEF0ED !important; border-color:#0B7A68 !important; color:#0B7A68 !important; transform:scale(1.18); box-shadow:0 0 0 3px rgba(11,122,104,.2); }
+  .dist-marker.hl-dim   { opacity:.25; transform:scale(.9); box-shadow:none; }
+
+  /* ── Tooltips Leaflet ── */
+  .leaflet-tooltip.dist-name-tip {
+    background:rgba(23,43,77,.88); color:#fff; border:none;
+    font-size:11px; font-weight:600; font-family:system-ui,sans-serif;
+    padding:3px 8px; border-radius:4px; box-shadow:0 2px 6px rgba(0,0,0,.3);
+    white-space:nowrap;
+  }
+  .leaflet-tooltip.dist-name-tip::before { border-top-color:rgba(23,43,77,.88); }
+  .leaflet-tooltip.edge-tip {
+    background:white; border:1px solid #DFE1E6;
+    font-size:11px; font-family:system-ui,sans-serif;
+    padding:2px 7px; border-radius:3px; box-shadow:0 1px 4px rgba(0,0,0,.12);
+  }
+  .leaflet-popup-content-wrapper { border-radius:6px !important; box-shadow:0 4px 12px rgba(9,30,66,.2) !important; }
+
+  /* ── Indicateur chemin ── */
+  #path-hint {
+    display:none; align-items:center; gap:8px;
+    font-size:12px; color:#0B7A68; font-weight:600;
+  }
+
+  /* ── Edge pick mode ── */
+  .dist-marker.hl-edge-a { background:#EBF3FF !important; border-color:#0052CC !important; color:#0052CC !important; transform:scale(1.3); box-shadow:0 0 0 4px rgba(0,82,204,.2); }
+  .dist-marker.hl-edge-b { background:#F3EBFF !important; border-color:#6554C0 !important; color:#6554C0 !important; transform:scale(1.3); box-shadow:0 0 0 4px rgba(101,84,192,.2); }
+</style>
+
+<div class="page-2col">
+
+  <!-- ── Carte Leaflet ── -->
+  <div class="panel" style="overflow:hidden">
+    <div class="panel-header">
+      <h2 class="panel-title">Carte des quartiers</h2>
+      <span class="lozenge lozenge-info"><%= districts.length %> quartiers · <%= edges.length / 2 %> liaisons</span>
+    </div>
+
+    <div id="leaflet-map" style="height:580px;width:100%;border-radius:0 0 var(--radius-md) var(--radius-md)"></div>
+
+    <!-- Légende + indicateur chemin -->
+    <div style="padding:var(--sp-3) var(--sp-4);display:flex;align-items:center;gap:var(--sp-5);flex-wrap:wrap;border-top:1px solid var(--color-border)">
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px">
+        <span style="width:12px;height:12px;border-radius:50%;background:#FFF0EE;border:2px solid #C4382B;display:inline-block"></span>
+        Priorité haute
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px">
+        <span style="width:12px;height:12px;border-radius:50%;background:#FFF8F0;border:2px solid #B86A0A;display:inline-block"></span>
+        Priorité normale
+      </div>
+      <div style="display:flex;align-items:center;gap:6px;font-size:12px">
+        <span style="width:12px;height:12px;border-radius:50%;background:#F0F5F3;border:2px solid #50706A;display:inline-block"></span>
+        Priorité basse
+      </div>
+      <div id="path-hint" style="margin-left:auto">
+        <span style="display:inline-block;width:28px;height:5px;background:#0B7A68;border-radius:3px"></span>
+        Chemin optimal Dijkstra
+      </div>
+    </div>
+  </div>
+
+  <!-- ── Panneau Dijkstra ── -->
+  <div>
+    <div class="panel">
+      <div class="panel-header">
+        <h2 class="panel-title">Calcul de trajet</h2>
+      </div>
+      <div class="panel-body">
+        <form hx-post="/admin/map/route"
+              hx-target="#result"
+              hx-swap="innerHTML"
+              hx-indicator="#calc-spinner">
+          <div class="form-group">
+            <label for="from" class="form-label">Quartier de départ</label>
+            <select name="from" id="from" class="form-select" required>
+              <option value="">Sélectionner…</option>
+              <% districts.forEach(function(d) { %>
+              <option value="<%= d.id %>"><%= d.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <div class="form-group">
+            <label for="to" class="form-label">Quartier d'arrivée</label>
+            <select name="to" id="to" class="form-select" required>
+              <option value="">Sélectionner…</option>
+              <% districts.forEach(function(d) { %>
+              <option value="<%= d.id %>"><%= d.name %></option>
+              <% }) %>
+            </select>
+          </div>
+          <button type="submit" class="btn btn-primary w-full" style="justify-content:center">
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                 style="margin-right:var(--sp-2)">
+              <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+            </svg>
+            Calculer du chemin optimal
+            <span id="calc-spinner" class="htmx-indicator" style="margin-left:var(--sp-2)">…</span>
+          </button>
+        </form>
+      </div>
+    </div>
+
+    <div id="result" style="margin-top:var(--sp-4)"></div>
+
+    <!-- ── Panneau Ajouter un quartier ── -->
+    <div class="panel" style="margin-top:var(--sp-4)">
+      <div class="panel-header" style="cursor:pointer;user-select:none"
+           onclick="toggleAddPanel()">
+        <h2 class="panel-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" style="margin-right:6px;vertical-align:middle">
+            <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="16"/>
+            <line x1="8" y1="12" x2="16" y2="12"/>
+          </svg>
+          Nouveau quartier
+        </h2>
+        <svg id="add-panel-chevron" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             style="transition:transform .25s;flex-shrink:0">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+
+      <div id="add-district-panel" style="display:none">
+        <div class="panel-body" style="padding-bottom:0">
+          <form id="add-district-form"
+                hx-post="/admin/districts"
+                hx-target="#district-add-result"
+                hx-swap="innerHTML"
+                hx-indicator="#add-spinner">
+
+            <div class="form-group">
+              <label class="form-label">Nom du quartier <span style="color:#C4382B">*</span></label>
+              <input name="name" class="form-input" required placeholder="ex : Ankazomanga"
+                     autocomplete="off"/>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Priorité de collecte</label>
+              <select name="priority" class="form-select">
+                <option value="1">Basse (1)</option>
+                <option value="2" selected>Normale (2)</option>
+                <option value="3">Haute (3)</option>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Position GPS</label>
+              <button type="button" id="btn-pick-loc"
+                      onclick="startPickMode()"
+                      class="btn btn-secondary w-full"
+                      style="justify-content:center;margin-bottom:var(--sp-2)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                     stroke="currentColor" stroke-width="2" style="margin-right:6px">
+                  <circle cx="12" cy="12" r="3"/>
+                  <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+                </svg>
+                Cliquer sur la carte pour placer
+              </button>
+              <div class="grid-2col-equal">
+                <div>
+                  <label class="form-label" style="font-size:11px">Latitude</label>
+                  <input name="lat" id="input-lat" type="number" step="0.000001"
+                         class="form-input" placeholder="-18.9083"
+                         style="font-size:12px"/>
+                </div>
+                <div>
+                  <label class="form-label" style="font-size:11px">Longitude</label>
+                  <input name="lng" id="input-lng" type="number" step="0.000001"
+                         class="form-input" placeholder="47.5263"
+                         style="font-size:12px"/>
+                </div>
+              </div>
+              <div id="pick-hint" style="display:none;font-size:11px;color:#0B7A68;
+                                          margin-top:6px;text-align:center">
+                 Cliquez n'importe où sur la carte…
+              </div>
+            </div>
+
+            <button type="submit" class="btn btn-primary w-full"
+                    style="justify-content:center;margin-bottom:var(--sp-3)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5" style="margin-right:6px">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Créer le quartier
+              <span id="add-spinner" class="htmx-indicator" style="margin-left:6px">…</span>
+            </button>
+          </form>
+        </div>
+
+        <div id="district-add-result" style="padding:0 var(--sp-4) var(--sp-3)"></div>
+
+        <!-- Liste compacte des quartiers existants -->
+        <div style="border-top:1px solid var(--color-border);padding:var(--sp-3) var(--sp-4)">
+          <div style="font-size:11px;font-weight:600;color:var(--color-text-subtle);
+                      text-transform:uppercase;letter-spacing:.5px;margin-bottom:var(--sp-2)">
+            <%= districts.length %> quartiers enregistrés
+          </div>
+          <div style="max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:4px"
+               id="districts-list">
+            <% districts.forEach(function(d) { %>
+            <div class="district-list-row" data-id="<%= d.id %>"
+                 style="display:flex;align-items:center;justify-content:space-between;
+                        padding:4px 6px;border-radius:var(--radius-sm);
+                        transition:background .15s;cursor:pointer"
+                 onmouseover="this.style.background='var(--color-bg)'"
+                 onmouseout="this.style.background=''"
+                 onclick="flyToDistrict(<%= d.id %>)">
+              <span style="font-size:12px;color:var(--color-text)"><%= d.name %></span>
+              <div style="display:flex;align-items:center;gap:6px">
+                <span class="lozenge <%= d.priority===3 ? 'lozenge-danger' : d.priority===2 ? 'lozenge-warning' : 'lozenge-default' %>"
+                      style="font-size:10px;padding:1px 6px">
+                  P <%= d.priority %>
+                </span>
+                <button type="button"
+                        onclick="event.stopPropagation();deleteDistrict(<%= d.id %>, '<%= d.name.replace(/'/g,'\\\'') %>', this)"
+                        style="background:none;border:none;cursor:pointer;color:var(--color-text-subtle);
+                               padding:2px 4px;border-radius:3px;line-height:1;font-size:16px"
+                        title="Supprimer <%= d.name %>">
+                  &times;
+                </button>
+              </div>
+            </div>
+            <% }) %>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── Panneau Nouvelle liaison ── -->
+    <div class="panel" style="margin-top:var(--sp-4)">
+      <div class="panel-header" style="cursor:pointer;user-select:none"
+           onclick="toggleEdgePanel()">
+        <h2 class="panel-title">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+               stroke-width="2.5" style="margin-right:6px;vertical-align:middle">
+            <circle cx="5" cy="12" r="2"/><circle cx="19" cy="12" r="2"/>
+            <line x1="7" y1="12" x2="17" y2="12"/>
+          </svg>
+          Nouvelle liaison
+        </h2>
+        <svg id="edge-panel-chevron" width="16" height="16" viewBox="0 0 24 24"
+             fill="none" stroke="currentColor" stroke-width="2"
+             style="transition:transform .25s;flex-shrink:0">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+
+      <div id="edge-panel" style="display:none">
+        <div class="panel-body" style="padding-bottom:0">
+          <form id="edge-form"
+                hx-post="/admin/edges"
+                hx-target="#edge-add-result"
+                hx-swap="innerHTML"
+                hx-indicator="#edge-spinner">
+
+            <div class="form-group">
+              <label class="form-label">Quartier A <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#EBF3FF;border:2px solid #0052CC;vertical-align:middle;margin-left:4px"></span></label>
+              <select name="from_id" id="edge-from" class="form-select" required>
+                <option value="">Sélectionner…</option>
+                <% districts.forEach(function(d) { %>
+                <option value="<%= d.id %>"><%= d.name %></option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Quartier B <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:#F3EBFF;border:2px solid #6554C0;vertical-align:middle;margin-left:4px"></span></label>
+              <select name="to_id" id="edge-to" class="form-select" required>
+                <option value="">Sélectionner…</option>
+                <% districts.forEach(function(d) { %>
+                <option value="<%= d.id %>"><%= d.name %></option>
+                <% }) %>
+              </select>
+            </div>
+
+            <div class="form-group">
+              <label class="form-label">Distance (km)</label>
+              <input name="distance" id="edge-distance" type="number"
+                     step="0.01" min="0.1" max="50" class="form-input"
+                     placeholder="ex : 1.5" required/>
+            </div>
+
+            <button type="button" id="btn-edge-pick"
+                    onclick="startEdgePickMode()"
+                    class="btn btn-secondary w-full"
+                    style="justify-content:center;margin-bottom:var(--sp-2)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" style="margin-right:6px">
+                <circle cx="12" cy="12" r="3"/>
+                <path d="M12 2v3M12 19v3M2 12h3M19 12h3"/>
+              </svg>
+              Sélectionner sur la carte
+            </button>
+            <div id="edge-pick-hint"
+                 style="display:none;font-size:11px;color:#0052CC;text-align:center;
+                        margin-bottom:var(--sp-2);font-weight:600"></div>
+
+            <button type="submit" class="btn btn-primary w-full"
+                    style="justify-content:center;margin-bottom:var(--sp-3)">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2.5" style="margin-right:6px">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>
+              Créer la liaison
+              <span id="edge-spinner" class="htmx-indicator" style="margin-left:6px">…</span>
+            </button>
+          </form>
+        </div>
+        <div id="edge-add-result" style="padding:0 var(--sp-4) var(--sp-3)"></div>
+      </div>
+    </div>
+
+  </div><!-- fin colonne droite -->
+
+</div>
+
+<%# Leaflet JS après le conteneur %>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+(function () {
+  /* ── Données injectées par EJS ── */
+  var DISTRICTS = <%- districtsJson %>;
+  var EDGES     = <%- edgesJson %>;
+
+  /* Index nom par id */
+  var nameMap = {};
+  DISTRICTS.forEach(function(d) { nameMap[d.id] = d.name; });
+
+  /* ── Init carte ── */
+  var map = L.map('leaflet-map', { zoomControl: true, attributionControl: true })
+              .setView([-18.9083, 47.5263], 13);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '© <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+  }).addTo(map);
+
+  /* ── Index coords ── */
+  var coordsMap = {};
+  DISTRICTS.forEach(function (d) { coordsMap[d.id] = { lat: d.lat, lng: d.lng }; });
+
+  /* Zoom initial pour englober tous les quartiers */
+  var allCoords = DISTRICTS.map(function (d) { return [d.lat, d.lng]; });
+  if (allCoords.length) map.fitBounds(L.latLngBounds(allCoords).pad(0.08));
+
+  /* ── Couleurs par priorité ── */
+  function pColors(p) {
+    if (p === 3) return { stroke: '#C4382B', fill: '#FFF0EE' };
+    if (p === 2) return { stroke: '#B86A0A', fill: '#FFF8F0' };
+    return          { stroke: '#50706A', fill: '#F0F5F3' };
+  }
+
+  /* ── Popup pour une liaison (avec bouton supprimer) ── */
+  function makeEdgePopup(fromId, fromName, toId, toName, dist) {
+    return '<div style="font-family:system-ui;min-width:190px">' +
+      '<div style="font-weight:700;font-size:13px;margin-bottom:4px;color:#172B4D">' + fromName + ' ↔ ' + toName + '</div>' +
+      '<div style="font-size:12px;color:#6B778C;margin-bottom:10px">' + dist + ' km</div>' +
+      '<button onclick="deleteEdge(' + fromId + ',' + toId + ',this)" ' +
+        'style="background:#FFEBE6;color:#C4382B;border:1px solid #FFB9A8;' +
+               'border-radius:3px;padding:4px 10px;font-size:12px;cursor:pointer;font-family:system-ui">' +
+        'Supprimer la liaison</button>' +
+      '</div>';
+  }
+
+  /* ── Arêtes ── */
+  var edgeLines = {};
+  EDGES.filter(function (e) { return e.from_id < e.to_id; }).forEach(function (e) {
+    var a = coordsMap[e.from_id];
+    var b = coordsMap[e.to_id];
+    if (!a || !b) return;
+    var fromName = nameMap[e.from_id] || ('#' + e.from_id);
+    var toName   = nameMap[e.to_id]   || ('#' + e.to_id);
+    var line = L.polyline([[a.lat, a.lng], [b.lat, b.lng]], {
+      color: '#8BB8AE', weight: 2.5, opacity: 0.75
+    }).addTo(map);
+    line.bindTooltip(e.distance + ' km', { sticky: true, className: 'edge-tip' });
+    line.bindPopup(makeEdgePopup(e.from_id, fromName, e.to_id, toName, e.distance));
+    edgeLines[e.from_id + '-' + e.to_id] = line;
+  });
+
+  /* ── Marqueurs districts ── */
+  var districtMarkers = {};
+  DISTRICTS.forEach(function (d) {
+    var c    = pColors(d.priority);
+    var icon = L.divIcon({
+      html:       '<div class="dist-marker dist-p' + d.priority + '" data-priority="' + d.priority + '">' + d.id + '</div>',
+      className:  '',
+      iconSize:   [30, 30],
+      iconAnchor: [15, 15],
+    });
+
+    var marker = L.marker([d.lat, d.lng], { icon: icon }).addTo(map);
+
+    marker.bindTooltip('<strong>' + d.name + '</strong>', {
+      direction:   'top',
+      offset:      [0, -18],
+      className:   'dist-name-tip',
+    });
+
+    marker.bindPopup(
+      '<div style="font-family:system-ui;min-width:160px">' +
+        '<div style="font-weight:700;font-size:14px;margin-bottom:4px;color:#172B4D">' + d.name + '</div>' +
+        '<div style="font-size:12px;color:#6B778C">Quartier #' + d.id + '</div>' +
+        '<div style="margin-top:8px">' +
+          '<span style="padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;' +
+                'background:' + c.fill + ';color:' + c.stroke + ';border:1px solid ' + c.stroke + '">' +
+            'Priorité ' + (d.priority === 3 ? 'haute' : d.priority === 2 ? 'normale' : 'basse') +
+          '</span>' +
+        '</div>' +
+      '</div>'
+    );
+
+    /* Sélection rapide dans les selects en cliquant le marqueur */
+    marker.on('click', function () {
+      if (edgeMode) { handleEdgeModeClick(d); return; }
+      var fromSel = document.getElementById('from');
+      var toSel   = document.getElementById('to');
+      if (!fromSel.value)  { fromSel.value = d.id; return; }
+      if (!toSel.value)    { toSel.value   = d.id; return; }
+      fromSel.value = d.id; toSel.value = '';
+    });
+
+    districtMarkers[d.id] = { marker: marker, priority: d.priority };
+  });
+
+  /* ── Couche route (route Dijkstra) ── */
+  var routeGroup = L.layerGroup().addTo(map);
+
+  /* ── Reset ── */
+  function resetHighlight() {
+    routeGroup.clearLayers();
+
+    Object.values(edgeLines).forEach(function (l) {
+      l.setStyle({ color: '#8BB8AE', weight: 2.5, opacity: 0.75 });
+    });
+
+    Object.values(districtMarkers).forEach(function (info) {
+      var el = info.marker.getElement();
+      if (el && el.firstChild) {
+        el.firstChild.className = 'dist-marker dist-p' + info.priority;
+      }
+    });
+
+    var hint = document.getElementById('path-hint');
+    if (hint) hint.style.display = 'none';
+  }
+
+  /* ── Surlignage du chemin Dijkstra ── */
+  function highlightPath(pathIds) {
+    resetHighlight();
+    if (!pathIds || pathIds.length < 2) return;
+
+    var pathSet = new Set(pathIds);
+    var coords  = pathIds.map(function (id) { return [coordsMap[id].lat, coordsMap[id].lng]; });
+
+    /* Chemin principal (halo blanc + ligne teal + tirets) */
+    L.polyline(coords, { color: 'white', weight: 11, opacity: 0.7, lineJoin: 'round' })
+      .addTo(routeGroup);
+    L.polyline(coords, { color: '#0B7A68', weight: 6, opacity: 1, lineJoin: 'round', lineCap: 'round' })
+      .addTo(routeGroup);
+    L.polyline(coords, { color: '#90E0CF', weight: 2, opacity: 0.9, dashArray: '6 14', lineJoin: 'round' })
+      .addTo(routeGroup);
+
+    /* Estomper arêtes hors chemin */
+    var edgesInPath = new Set();
+    for (var i = 0; i < pathIds.length - 1; i++) {
+      var a = Math.min(pathIds[i], pathIds[i + 1]);
+      var b = Math.max(pathIds[i], pathIds[i + 1]);
+      edgesInPath.add(a + '-' + b);
+    }
+    Object.entries(edgeLines).forEach(function (entry) {
+      var key  = entry[0];
+      var line = entry[1];
+      edgesInPath.has(key)
+        ? line.setStyle({ opacity: 0 })
+        : line.setStyle({ color: '#C2D5D1', weight: 1.5, opacity: 0.4 });
+    });
+
+    /* Colorer les marqueurs */
+    pathIds.forEach(function (id, i) {
+      var info = districtMarkers[id];
+      if (!info) return;
+      var el = info.marker.getElement();
+      if (!el || !el.firstChild) return;
+      var cls = 'dist-marker dist-p' + info.priority + ' ';
+      if (i === 0)                         cls += 'hl-start';
+      else if (i === pathIds.length - 1)   cls += 'hl-end';
+      else                                  cls += 'hl-via';
+      el.firstChild.className = cls;
+    });
+
+    /* Estomper marqueurs hors chemin */
+    Object.entries(districtMarkers).forEach(function (entry) {
+      var id   = parseInt(entry[0], 10);
+      var info = entry[1];
+      if (pathSet.has(id)) return;
+      var el = info.marker.getElement();
+      if (el && el.firstChild) el.firstChild.classList.add('hl-dim');
+    });
+
+    /* Recentrer sur le trajet */
+    map.fitBounds(L.latLngBounds(coords).pad(0.3));
+
+    var hint = document.getElementById('path-hint');
+    if (hint) hint.style.display = 'flex';
+  }
+
+  /* ── Edge mode : cliquer deux marqueurs pour créer une liaison ── */
+  var edgeMode = false;
+
+  function highlightEdgeMarker(id, cls) {
+    var info = districtMarkers[id];
+    if (!info) return;
+    var el = info.marker.getElement();
+    if (el && el.firstChild) el.firstChild.className = 'dist-marker dist-p' + info.priority + ' ' + cls;
+  }
+  function unhighlightEdgeMarker(id) {
+    var info = districtMarkers[id];
+    if (!info) return;
+    var el = info.marker.getElement();
+    if (el && el.firstChild) el.firstChild.className = 'dist-marker dist-p' + info.priority;
+  }
+
+  function handleEdgeModeClick(d) {
+    var fromSel = document.getElementById('edge-from');
+    var toSel   = document.getElementById('edge-to');
+    var hint    = document.getElementById('edge-pick-hint');
+    var btn     = document.getElementById('btn-edge-pick');
+
+    if (!fromSel.value) {
+      fromSel.value = d.id;
+      highlightEdgeMarker(d.id, 'hl-edge-a');
+      if (hint) hint.textContent = '→ cliquez maintenant le quartier B (violet)';
+    } else if (!toSel.value && parseInt(fromSel.value) !== d.id) {
+      toSel.value = d.id;
+      highlightEdgeMarker(d.id, 'hl-edge-b');
+      edgeMode = false;
+      if (hint) hint.style.display = 'none';
+      if (btn) {
+        btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><polyline points="20 6 9 17 4 12"/></svg>Sélection faite — cliquer pour rechoisir';
+      }
+    }
+  }
+
+  function startEdgeModeInternal() {
+    var fromSel = document.getElementById('edge-from');
+    var toSel   = document.getElementById('edge-to');
+    var hint    = document.getElementById('edge-pick-hint');
+    var btn     = document.getElementById('btn-edge-pick');
+
+    /* Nettoyer ancienne sélection */
+    if (fromSel && fromSel.value) unhighlightEdgeMarker(parseInt(fromSel.value));
+    if (toSel   && toSel.value)   unhighlightEdgeMarker(parseInt(toSel.value));
+    if (fromSel) fromSel.value = '';
+    if (toSel)   toSel.value   = '';
+
+    edgeMode = true;
+    if (hint) { hint.textContent = '→ cliquez le quartier A (bleu)'; hint.style.display = 'block'; }
+    if (btn) {
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Mode sélection actif…';
+    }
+  }
+
+  /* Ajoute une nouvelle arête sur la carte (après création HTMX) */
+  function addEdgeToMap(fromId, fromName, toId, toName, dist) {
+    var a   = coordsMap[fromId];
+    var b   = coordsMap[toId];
+    if (!a || !b) return;
+
+    var key = Math.min(fromId, toId) + '-' + Math.max(fromId, toId);
+    if (edgeLines[key]) map.removeLayer(edgeLines[key]);
+
+    var line = L.polyline([[a.lat, a.lng], [b.lat, b.lng]], {
+      color: '#8BB8AE', weight: 2.5, opacity: 0.75
+    }).addTo(map);
+    line.bindTooltip(dist + ' km', { sticky: true, className: 'edge-tip' });
+    line.bindPopup(makeEdgePopup(fromId, fromName, toId, toName, dist));
+    edgeLines[key] = line;
+
+    unhighlightEdgeMarker(fromId);
+    unhighlightEdgeMarker(toId);
+
+    document.getElementById('edge-form').reset();
+    var btn = document.getElementById('btn-edge-pick');
+    if (btn) btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right:6px"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>Sélectionner sur la carte';
+  }
+
+  window._tanaEdgeStart = startEdgeModeInternal;
+  window._tanaAddEdge   = addEdgeToMap;
+  window._tanaEdgeLines = edgeLines;
+
+  /* ── Pick mode : cliquer sur la carte pour positionner un quartier ── */
+  var pickMode   = false;
+  var pickMarker = null;
+
+  function startPickModeInternal() {
+    pickMode = true;
+    document.getElementById('leaflet-map').style.cursor = 'crosshair';
+    var hint = document.getElementById('pick-hint');
+    if (hint) hint.style.display = 'block';
+    var btn = document.getElementById('btn-pick-loc');
+    if (btn) btn.textContent = '🎯 Cliquez sur la carte…';
+  }
+
+  map.on('click', function (e) {
+    if (!pickMode) return;
+    var lat = e.latlng.lat.toFixed(6);
+    var lng = e.latlng.lng.toFixed(6);
+
+    document.getElementById('input-lat').value = lat;
+    document.getElementById('input-lng').value = lng;
+
+    if (pickMarker) map.removeLayer(pickMarker);
+    pickMarker = L.marker([lat, lng], {
+      icon: L.divIcon({
+        html: '<div style="width:22px;height:22px;background:#0B7A68;border:3px solid white;' +
+              'border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,.4)"></div>',
+        className: '', iconSize: [22, 22], iconAnchor: [11, 11],
+      }),
+    }).addTo(map).bindTooltip('Nouveau quartier', { permanent: true, direction: 'top', offset: [0, -15] });
+
+    pickMode = false;
+    document.getElementById('leaflet-map').style.cursor = '';
+    var hint = document.getElementById('pick-hint');
+    if (hint) hint.style.display = 'none';
+    var btn = document.getElementById('btn-pick-loc');
+    if (btn) {
+      btn.innerHTML = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="margin-right:5px"><polyline points="20 6 9 17 4 12"/></svg>Position sélectionnée — modifier ?';
+    }
+  });
+
+  /* Insère une <option> dans un <select> en respectant l'ordre alphabétique */
+  function insertOptAlpha(selectEl, value, text) {
+    var opt  = new Option(text, value);
+    var opts = selectEl.options;
+    for (var i = 1; i < opts.length; i++) {
+      if (opts[i].text.localeCompare(text, 'fr') > 0) {
+        selectEl.insertBefore(opt, opts[i]);
+        return;
+      }
+    }
+    selectEl.appendChild(opt);
+  }
+
+  /* ── Ajout d'un marqueur après création HTMX ── */
+  function addDistrictToMap(d) {
+    if (!d.lat || !d.lng) return;
+
+    var c    = pColors(d.priority);
+    var icon = L.divIcon({
+      html:       '<div class="dist-marker dist-p' + d.priority + '" data-priority="' + d.priority + '">' + d.id + '</div>',
+      className:  '', iconSize: [30, 30], iconAnchor: [15, 15],
+    });
+
+    var marker = L.marker([d.lat, d.lng], { icon: icon }).addTo(map);
+    marker.bindTooltip('<strong>' + d.name + '</strong>', { direction: 'top', offset: [0, -18], className: 'dist-name-tip' });
+    marker.bindPopup(
+      '<div style="font-family:system-ui;min-width:160px">' +
+        '<div style="font-weight:700;font-size:14px;margin-bottom:4px;color:#172B4D">' + d.name + '</div>' +
+        '<div style="font-size:12px;color:#6B778C">Quartier #' + d.id + '</div>' +
+        '<div style="margin-top:8px"><span style="padding:2px 8px;border-radius:3px;font-size:11px;font-weight:600;' +
+        'background:' + c.fill + ';color:' + c.stroke + ';border:1px solid ' + c.stroke + '">' +
+        'Priorité ' + (d.priority === 3 ? 'haute' : d.priority === 2 ? 'normale' : 'basse') + '</span></div>' +
+      '</div>'
+    );
+    marker.on('click', function () {
+      var fromSel = document.getElementById('from');
+      var toSel   = document.getElementById('to');
+      if (!fromSel.value) { fromSel.value = d.id; return; }
+      if (!toSel.value)   { toSel.value   = d.id; return; }
+      fromSel.value = d.id; toSel.value = '';
+    });
+
+    coordsMap[d.id]      = { lat: d.lat, lng: d.lng };
+    districtMarkers[d.id] = { marker: marker, priority: d.priority };
+
+    /* Retirer le marqueur temporaire de pick */
+    if (pickMarker) { map.removeLayer(pickMarker); pickMarker = null; }
+
+    /* Ajouter aux selects (ordre alphabétique) */
+    ['from', 'to', 'edge-from', 'edge-to'].forEach(function (sel) {
+      insertOptAlpha(document.getElementById(sel), d.id, d.name);
+    });
+
+    /* Ajouter à la liste dans le panneau */
+    var row = document.createElement('div');
+    row.className = 'district-list-row';
+    row.dataset.id = d.id;
+    row.style.cssText = 'display:flex;align-items:center;justify-content:space-between;padding:4px 6px;border-radius:3px;cursor:pointer;transition:background .15s';
+    row.onmouseover  = function () { row.style.background = 'var(--color-bg)'; };
+    row.onmouseout   = function () { row.style.background = ''; };
+    row.onclick      = function () { flyToDistrict(d.id); };
+    row.innerHTML =
+      '<span style="font-size:12px;color:var(--color-text)">' + d.name + '</span>' +
+      '<div style="display:flex;align-items:center;gap:6px">' +
+        '<span class="lozenge ' + (d.priority === 3 ? 'lozenge-danger' : d.priority === 2 ? 'lozenge-warning' : 'lozenge-default') +
+        '" style="font-size:10px;padding:1px 6px">P' + d.priority + '</span>' +
+        '<button type="button" onclick="event.stopPropagation();deleteDistrict(' + d.id + ',\'' + d.name.replace(/'/g, "\\'") + '\',this)" ' +
+        'style="background:none;border:none;cursor:pointer;color:var(--color-text-subtle);padding:2px 4px;border-radius:3px;font-size:16px;line-height:1">&times;</button>' +
+      '</div>';
+    document.getElementById('districts-list').appendChild(row);
+
+    /* Volar vers le nouveau quartier */
+    map.flyTo([d.lat, d.lng], 16);
+
+    /* Reset formulaire */
+    document.getElementById('add-district-form').reset();
+    var btn = document.getElementById('btn-pick-loc');
+    if (btn) btn.textContent = 'Cliquer sur la carte pour placer';
+  }
+
+  /* ── Exposition globale (pour les onclick HTML) ── */
+  window._tanaFlyTo   = function (id) {
+    var c = coordsMap[id];
+    if (c && c.lat && c.lng) map.flyTo([c.lat, c.lng], 16);
+  };
+  window._tanaAddDist  = addDistrictToMap;
+  window._tanaStart    = startPickModeInternal;
+  window._tanaMarkers  = districtMarkers;
+
+  /* ── Écoute HTMX ── */
+  document.body.addEventListener('htmx:afterSwap', function (evt) {
+    var targetId = evt.detail.target && evt.detail.target.id;
+
+    /* Résultat Dijkstra */
+    if (targetId === 'result') {
+      var dataEl = document.getElementById('path-data');
+      if (!dataEl) { resetHighlight(); return; }
+      try { highlightPath(JSON.parse(dataEl.dataset.ids)); }
+      catch (e) { resetHighlight(); }
+      return;
+    }
+
+    /* Nouveau quartier créé */
+    if (targetId === 'district-add-result') {
+      var el = document.getElementById('new-district-data');
+      if (!el) return;
+      addDistrictToMap({
+        id:       parseInt(el.dataset.id, 10),
+        name:     el.dataset.name,
+        priority: parseInt(el.dataset.priority, 10),
+        lat:      el.dataset.lat ? parseFloat(el.dataset.lat) : null,
+        lng:      el.dataset.lng ? parseFloat(el.dataset.lng) : null,
+      });
+    }
+
+    /* Nouvelle liaison créée */
+    if (targetId === 'edge-add-result') {
+      var el = document.getElementById('new-edge-data');
+      if (!el) return;
+      addEdgeToMap(
+        parseInt(el.dataset.fromId),
+        el.dataset.fromName,
+        parseInt(el.dataset.toId),
+        el.dataset.toName,
+        parseFloat(el.dataset.distance)
+      );
+    }
+  });
+
+  /* Revalidation taille après toggle sidebar */
+  var sidebarToggle = document.getElementById('sidebarToggle');
+  if (sidebarToggle) {
+    sidebarToggle.addEventListener('click', function () {
+      setTimeout(function () { map.invalidateSize(); }, 320);
+    });
+  }
+})();
+
+/* ════════════════════════════════════════════════════════════
+   Fonctions globales appelées par les onclick dans le HTML
+   ════════════════════════════════════════════════════════════ */
+function toggleAddPanel() {
+  var panel   = document.getElementById('add-district-panel');
+  var chevron = document.getElementById('add-panel-chevron');
+  var open    = panel.style.display !== 'none';
+  panel.style.display     = open ? 'none' : 'block';
+  chevron.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+function startPickMode() {
+  if (window._tanaStart) window._tanaStart();
+}
+
+function flyToDistrict(id) {
+  if (window._tanaFlyTo) window._tanaFlyTo(id);
+}
+
+function toggleEdgePanel() {
+  var panel   = document.getElementById('edge-panel');
+  var chevron = document.getElementById('edge-panel-chevron');
+  var open    = panel.style.display !== 'none';
+  panel.style.display     = open ? 'none' : 'block';
+  chevron.style.transform = open ? '' : 'rotate(180deg)';
+}
+
+function startEdgePickMode() {
+  if (window._tanaEdgeStart) window._tanaEdgeStart();
+}
+
+function deleteEdge(fromId, toId, btn) {
+  if (!confirm('Supprimer la liaison entre ces deux quartiers ?\nCette action est irréversible.')) return;
+  if (btn) btn.disabled = true;
+
+  fetch('/admin/edges/' + fromId + '/' + toId + '/delete', { method: 'POST' })
+    .then(function(r) { return r.json(); })
+    .then(function(data) {
+      if (!data.ok) { if (btn) btn.disabled = false; return; }
+      var key = Math.min(fromId, toId) + '-' + Math.max(fromId, toId);
+      if (window._tanaEdgeLines && window._tanaEdgeLines[key]) {
+        window._tanaEdgeLines[key].remove();
+        delete window._tanaEdgeLines[key];
+      }
+    })
+    .catch(function() { if (btn) btn.disabled = false; });
+}
+
+function deleteDistrict(id, name, btn) {
+  if (!confirm('Supprimer "' + name + '" ?\nCette action est irréversible et supprime aussi les liaisons de ce quartier.')) return;
+  btn.disabled = true;
+
+  fetch('/admin/districts/' + id + '/delete', { method: 'POST' })
+    .then(function (r) { return r.json(); })
+    .then(function (data) {
+      if (!data.ok) { btn.disabled = false; return; }
+
+      /* Retirer la ligne de la liste */
+      var row = document.querySelector('.district-list-row[data-id="' + id + '"]');
+      if (row) row.remove();
+
+      /* Retirer des selects Dijkstra */
+      ['from', 'to'].forEach(function (sel) {
+        var opt = document.querySelector('#' + sel + ' option[value="' + id + '"]');
+        if (opt) opt.remove();
+      });
+
+      /* Retirer le marqueur de la carte */
+      if (window._tanaMarkers && window._tanaMarkers[id]) {
+        window._tanaMarkers[id].marker.remove();
+        delete window._tanaMarkers[id];
+      }
+    })
+    .catch(function () { btn.disabled = false; });
+}
+</script>

@@ -1,0 +1,77 @@
+<%
+  const statusLabel = { planned:'Planifié', active:'En cours', done:'Complété', cancelled:'Annulé' };
+  const statusLoz   = { planned:'lozenge-default', active:'lozenge-warning', done:'lozenge-success', cancelled:'lozenge-danger' };
+  const dtLocal     = tour.scheduled_at.slice(0,16).replace(' ','T');
+%>
+
+<div class="drawer-header">
+  <div>
+    <p class="drawer-eyebrow">Tournée #<%= tour.id %></p>
+    <h2 class="drawer-title"><%= tour.district_name %></h2>
+  </div>
+  <div style="display:flex;align-items:center;gap:var(--sp-3)">
+    <span class="lozenge <%= statusLoz[tour.status] %>"><%= statusLabel[tour.status] %></span>
+    <button class="drawer-close" onclick="closeDrawer()" aria-label="Fermer">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="drawer-body">
+  <% if (success) { %>
+  <div class="alert alert-success" style="margin-bottom:var(--sp-4)">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>
+    Tournée mise à jour.
+  </div>
+  <% } %>
+
+  <form hx-post="/admin/planning/<%= tour.id %>" hx-target="#drawer-content" hx-swap="innerHTML">
+    <div class="form-group">
+      <label class="form-label">Éboueur</label>
+      <select name="worker_id" class="form-select" required>
+        <% workers.forEach(w => { %>
+        <option value="<%= w.id %>" <%= w.id == tour.worker_id ? 'selected' : '' %>><%= w.name %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Camion</label>
+      <select name="truck_id" class="form-select" required>
+        <% trucks.forEach(t => { %>
+        <option value="<%= t.id %>" <%= t.id == tour.truck_id ? 'selected' : '' %>><%= t.plate %></option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Quartier</label>
+      <select name="district_id" class="form-select" required>
+        <% districts.forEach(d => { %>
+        <option value="<%= d.id %>" <%= d.id == tour.district_id ? 'selected' : '' %>>
+          <%= d.name %> (<%= d.priority === 3 ? 'Haute' : d.priority === 2 ? 'Normale' : 'Basse' %>)
+        </option>
+        <% }) %>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Date et heure</label>
+      <input type="datetime-local" name="scheduled_at" class="form-input" value="<%= dtLocal %>" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Statut</label>
+      <select name="status" class="form-select">
+        <option value="planned"   <%= tour.status === 'planned'   ? 'selected' : '' %>>Planifié</option>
+        <option value="active"    <%= tour.status === 'active'    ? 'selected' : '' %>>En cours</option>
+        <option value="done"      <%= tour.status === 'done'      ? 'selected' : '' %>>Complété</option>
+        <option value="cancelled" <%= tour.status === 'cancelled' ? 'selected' : '' %>>Annulé</option>
+      </select>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Note <span class="text-subtle">(optionnel)</span></label>
+      <textarea name="note" class="form-textarea" rows="2" placeholder="Instructions particulières…"><%= tour.note || '' %></textarea>
+    </div>
+    <div class="drawer-footer">
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+      <button type="button" class="btn btn-subtle" onclick="closeDrawer()">Annuler</button>
+    </div>
+  </form>
+</div>

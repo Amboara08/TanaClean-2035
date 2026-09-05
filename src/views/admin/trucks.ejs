@@ -1,0 +1,67 @@
+<%
+  const statusLoz = { available:'lozenge-success', in_use:'lozenge-warning', maintenance:'lozenge-danger' };
+  const statusLabel = { available:'Disponible', in_use:'En service', maintenance:'Maintenance' };
+%>
+<%- include('../partials/auto-open-drawer', { autoOpen, drawerUrl: '/admin/trucks' }) %>
+
+<div class="page-2col-sm">
+
+  <div class="panel">
+    <div class="panel-header">
+      <h2 class="panel-title">Flotte de camions</h2>
+      <span class="lozenge lozenge-info"><%= trucks.length %> véhicules</span>
+    </div>
+    <div class="table-scroll" style="padding:0">
+      <table class="aui-table">
+        <thead>
+          <tr><th>Immatriculation</th><th>Capacité</th><th>Statut</th><th></th></tr>
+        </thead>
+        <tbody>
+          <% trucks.forEach(t => { %>
+          <tr hx-get="/admin/trucks/<%= t.id %>" hx-target="#drawer-content" hx-swap="innerHTML">
+            <td><strong><code style="font-family:var(--font-mono)"><%= t.plate %></code></strong></td>
+            <td class="text-sm"><%= t.capacity_t %> t</td>
+            <td><span class="lozenge <%= statusLoz[t.status] %>"><%= statusLabel[t.status] %></span></td>
+            <td onclick="event.stopPropagation()">
+              <form action="/admin/trucks/<%= t.id %>/delete" method="POST"
+                    onsubmit="return confirm('Supprimer ce camion ?')">
+                <button type="submit" class="btn btn-link btn-sm" style="color:var(--color-danger)">Supprimer</button>
+              </form>
+            </td>
+          </tr>
+          <% }) %>
+        </tbody>
+      </table>
+      <%- include('../partials/pagination', { currentPage, totalPages, total, baseParams }) %>
+    </div>
+  </div>
+
+  <div class="panel add-fab-panel" id="addFabPanel" data-fab-label="Ajouter un camion">
+    <div class="panel-header">
+      <h2 class="panel-title">Ajouter un camion</h2>
+    </div>
+    <div class="panel-body">
+      <form action="/admin/trucks" method="POST">
+        <div class="form-group">
+          <label class="form-label">Immatriculation</label>
+          <input type="text" name="plate" class="form-input" placeholder="TAN-006-A" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Capacité (tonnes)</label>
+          <input type="number" name="capacity_t" class="form-input" placeholder="8.00" step="0.5" min="1" required>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Statut initial</label>
+          <select name="status" class="form-select">
+            <option value="available">Disponible</option>
+            <option value="maintenance">Maintenance</option>
+          </select>
+        </div>
+        <button type="submit" class="btn btn-primary w-full" style="justify-content:center;margin-top:var(--sp-3)">
+          Ajouter
+        </button>
+      </form>
+    </div>
+  </div>
+
+</div>

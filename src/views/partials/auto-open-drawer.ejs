@@ -1,0 +1,11 @@
+<% if (typeof autoOpen !== 'undefined' && autoOpen) { %>
+<script>
+  document.addEventListener('DOMContentLoaded', function () {
+    openDrawer();
+    htmx.ajax('GET', '<%= drawerUrl %>/<%= autoOpen %>', {
+      target: '#drawer-content',
+      swap: 'innerHTML'
+    });
+  });
+</script>
+<% } %>

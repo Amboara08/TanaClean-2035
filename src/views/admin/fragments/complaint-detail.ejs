@@ -1,0 +1,112 @@
+<%
+  const statusLabel = { open:'Ouverte', processing:'En cours', closed:'Clôturée' };
+  const statusLoz   = { open:'lozenge-danger', processing:'lozenge-warning', closed:'lozenge-success' };
+%>
+
+<div class="drawer-header">
+  <div>
+    <p class="drawer-eyebrow">Réclamation #<%= complaint.id %></p>
+    <h2 class="drawer-title"><%= complaint.citizen_name %></h2>
+  </div>
+  <div style="display:flex;align-items:center;gap:var(--sp-3)">
+    <span class="lozenge <%= statusLoz[complaint.status] %>"><%= statusLabel[complaint.status] %></span>
+    <button class="drawer-close" onclick="closeDrawer()" aria-label="Fermer">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="drawer-body">
+  <% if (success) { %>
+  <div class="alert alert-success" style="margin-bottom:var(--sp-4)">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>
+    Mise à jour enregistrée.
+  </div>
+  <% } %>
+
+  <div class="drawer-info-row">
+    <span class="drawer-info-label">Quartier</span>
+    <span><%= complaint.district_name %></span>
+  </div>
+  <div class="drawer-info-row">
+    <span class="drawer-info-label">Date</span>
+    <span><%= complaint.created_at.slice(0,16).replace('T',' ') %></span>
+  </div>
+  <% if (complaint.is_urgent) { %>
+  <div class="drawer-info-row">
+    <span class="drawer-info-label">Urgence</span>
+    <span class="lozenge lozenge-urgent">Signalement urgent</span>
+  </div>
+  <% } %>
+
+  <div class="drawer-divider"></div>
+
+  <!-- Contenu de la réclamation -->
+  <div style="background:var(--color-bg);border-radius:var(--radius-md);padding:var(--sp-4);margin-bottom:var(--sp-5);font-size:var(--text-base);line-height:var(--leading-loose);color:var(--color-text)">
+    <%= complaint.content %>
+  </div>
+
+  <!-- Fil de réponses -->
+  <% if (responses && responses.length) { %>
+  <div style="margin-bottom:var(--sp-5)">
+    <p style="font-size:var(--text-sm);font-weight:600;color:var(--color-text-subtle);text-transform:uppercase;letter-spacing:.04em;margin-bottom:var(--sp-3)">
+      Réponses (<%= responses.length %>)
+    </p>
+    <div style="display:flex;flex-direction:column;gap:var(--sp-3)">
+      <% responses.forEach(function(r) { %>
+      <div style="background:var(--color-brand-subtle);border-left:3px solid var(--color-brand);border-radius:0 var(--radius-md) var(--radius-md) 0;padding:var(--sp-3) var(--sp-4)">
+        <div style="display:flex;align-items:center;gap:var(--sp-2);margin-bottom:var(--sp-2)">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+          <strong style="font-size:var(--text-sm);color:var(--color-brand)"><%= r.author_name %></strong>
+          <span style="font-size:11px;color:var(--color-text-subtle)">
+            <%= new Date(r.created_at).toLocaleDateString('fr-FR',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}) %>
+          </span>
+        </div>
+        <p style="font-size:var(--text-sm);color:var(--color-text);line-height:var(--leading-loose);margin:0"><%= r.content %></p>
+      </div>
+      <% }) %>
+    </div>
+  </div>
+  <div class="drawer-divider"></div>
+  <% } %>
+
+  <!-- Formulaire réponse -->
+  <form hx-post="/admin/complaints/<%= complaint.id %>/respond" hx-target="#drawer-content" hx-swap="innerHTML"
+        style="margin-bottom:var(--sp-5)">
+    <div class="form-group">
+      <label class="form-label">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        Répondre au citoyen
+      </label>
+      <textarea name="content" class="form-input" rows="3"
+                style="resize:vertical"
+                placeholder="Votre réponse sera notifiée au citoyen…" required></textarea>
+    </div>
+    <button type="submit" class="btn btn-primary btn-sm">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+      Envoyer la réponse
+    </button>
+  </form>
+
+  <!-- Changer le statut -->
+  <% if (complaint.status !== 'closed') { %>
+  <form hx-post="/admin/complaints/<%= complaint.id %>" hx-target="#drawer-content" hx-swap="innerHTML">
+    <div class="form-group">
+      <label class="form-label">Changer le statut</label>
+      <select name="status" class="form-select">
+        <option value="open"       <%= complaint.status === 'open'       ? 'selected' : '' %>>Ouverte</option>
+        <option value="processing" <%= complaint.status === 'processing' ? 'selected' : '' %>>En cours de traitement</option>
+        <option value="closed"     <%= complaint.status === 'closed'     ? 'selected' : '' %>>Clôturée</option>
+      </select>
+    </div>
+    <div class="drawer-footer">
+      <button type="submit" class="btn btn-secondary btn-sm">Mettre à jour le statut</button>
+      <button type="button" class="btn btn-subtle" onclick="closeDrawer()">Fermer</button>
+    </div>
+  </form>
+  <% } else { %>
+  <div class="drawer-footer">
+    <button type="button" class="btn btn-subtle" onclick="closeDrawer()">Fermer</button>
+  </div>
+  <% } %>
+</div>

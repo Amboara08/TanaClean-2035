@@ -1,0 +1,66 @@
+<% if (total > 0) { %>
+<%
+  const WINDOW    = 2;
+  const sep       = baseParams ? baseParams + '&' : '';
+  const isHtmx    = typeof hxConfig !== 'undefined' && hxConfig;
+  const hxSwap    = isHtmx ? (hxConfig.hxSwap || 'innerHTML') : null;
+
+  const pages = [];
+  for (let i = 1; i <= totalPages; i++) {
+    if (i === 1 || i === totalPages || (i >= currentPage - WINDOW && i <= currentPage + WINDOW)) {
+      pages.push(i);
+    }
+  }
+%>
+<div class="pagination">
+  <span class="pagination-info"><%= total %> résultat<%= total > 1 ? 's' : '' %></span>
+
+  <div class="pagination-pages">
+
+    <% if (currentPage > 1) { %>
+    <% if (isHtmx) { %>
+      <a hx-get="<%= hxConfig.hxGet %>?<%= sep %>page=<%= currentPage - 1 %>"
+         hx-target="<%= hxConfig.hxTarget %>" hx-swap="<%= hxSwap %>"
+         class="page-btn page-btn-nav" role="button" style="cursor:pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </a>
+    <% } else { %>
+      <a href="?<%= sep %>page=<%= currentPage - 1 %>" class="page-btn page-btn-nav">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+      </a>
+    <% } %>
+    <% } %>
+
+    <%
+    let last = 0;
+    pages.forEach(function(p) {
+      if (last && p - last > 1) {
+    %><span class="page-ellipsis">…</span><%
+      }
+      if (isHtmx) {
+    %>
+      <a hx-get="<%= hxConfig.hxGet %>?<%= sep %>page=<%= p %>"
+         hx-target="<%= hxConfig.hxTarget %>" hx-swap="<%= hxSwap %>"
+         class="page-btn <%= p === currentPage ? 'active' : '' %>" role="button" style="cursor:pointer"><%= p %></a>
+    <% } else { %>
+      <a href="?<%= sep %>page=<%= p %>"
+         class="page-btn <%= p === currentPage ? 'active' : '' %>"><%= p %></a>
+    <% } last = p; }); %>
+
+    <% if (currentPage < totalPages) { %>
+    <% if (isHtmx) { %>
+      <a hx-get="<%= hxConfig.hxGet %>?<%= sep %>page=<%= currentPage + 1 %>"
+         hx-target="<%= hxConfig.hxTarget %>" hx-swap="<%= hxSwap %>"
+         class="page-btn page-btn-nav" role="button" style="cursor:pointer">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+    <% } else { %>
+      <a href="?<%= sep %>page=<%= currentPage + 1 %>" class="page-btn page-btn-nav">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+      </a>
+    <% } %>
+    <% } %>
+
+  </div>
+</div>
+<% } %>

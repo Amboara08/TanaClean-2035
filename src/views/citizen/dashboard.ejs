@@ -1,0 +1,50 @@
+<div class="stat-grid">
+  <div class="stat-card">
+    <svg class="stat-card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+    <div class="stat-card-label">Mes réclamations</div>
+    <div class="stat-card-value"><%= myComplaints.length %></div>
+    <div class="stat-card-sub"><%= myComplaints.filter(c => c.status === 'open').length %> ouverte(s)</div>
+  </div>
+
+  <div class="stat-card">
+    <svg class="stat-card-icon" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M18 8h1a4 4 0 0 1 0 8h-1"/><path d="M2 8h16v9a4 4 0 0 1-4 4H6a4 4 0 0 1-4-4V8z"/><line x1="6" y1="1" x2="6" y2="4"/><line x1="10" y1="1" x2="10" y2="4"/><line x1="14" y1="1" x2="14" y2="4"/></svg>
+    <div class="stat-card-label">Notifications</div>
+    <div class="stat-card-value"><%= unreadCount %></div>
+    <div class="stat-card-sub">non lue<%= unreadCount > 1 ? 's' : '' %></div>
+  </div>
+</div>
+
+<!-- Prochain passage dans le quartier -->
+<div class="panel mb-4">
+  <div class="panel-header">
+    <h2 class="panel-title">Prochain passage dans votre quartier</h2>
+  </div>
+  <div class="panel-body">
+    <% if (nextTour) { %>
+    <div style="display:flex;align-items:center;gap:var(--sp-4)">
+      <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--color-brand)" stroke-width="1.5"><rect x="1" y="3" width="15" height="13"/><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"/><circle cx="5.5" cy="18.5" r="2.5"/><circle cx="18.5" cy="18.5" r="2.5"/></svg>
+      <div>
+        <div style="font-size:var(--text-lg);font-weight:700"><%= nextTour.scheduled_at.slice(11,16) %> — <%= nextTour.district_name %></div>
+        <div class="text-subtle text-sm">Camion <%= nextTour.truck_plate %> · Éboueur : <%= nextTour.worker_name %></div>
+        <div style="margin-top:var(--sp-2)"><span class="lozenge lozenge-warning">En cours</span></div>
+      </div>
+    </div>
+    <% } else { %>
+    <p class="text-subtle" style="text-align:center">Aucun passage prévu dans votre quartier aujourd'hui.</p>
+    <% } %>
+  </div>
+</div>
+
+<!-- Notifications (polling HTMX toutes les 30s) -->
+<div class="panel"
+     hx-get="/citizen/notifications-fragment"
+     hx-trigger="load, every 30s"
+     hx-swap="innerHTML"
+     id="notif-panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Notifications</h2>
+  </div>
+  <div class="panel-body">
+    <p class="text-subtle text-sm">Chargement…</p>
+  </div>
+</div>

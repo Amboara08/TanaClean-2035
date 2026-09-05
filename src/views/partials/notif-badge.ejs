@@ -1,0 +1,7 @@
+<span id="notif-badge"
+  hx-get="/notif/count"
+  hx-trigger="load, every 30s"
+  hx-swap="outerHTML"
+  class="notif-badge<%= count > 0 ? ' notif-badge-active' : '' %>">
+  <% if (count > 0) { %><%= count > 99 ? '99+' : count %><% } %>
+</span>

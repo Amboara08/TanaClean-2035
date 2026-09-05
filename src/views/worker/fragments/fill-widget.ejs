@@ -1,0 +1,50 @@
+<%
+  const fillPct = Math.round(currentTruck.fill_level * 100);
+  const fillColor = fillPct >= 90
+    ? 'var(--color-danger)'
+    : fillPct >= 70
+      ? 'var(--color-warning)'
+      : 'var(--color-success)';
+  const fillClass = fillPct >= 90 ? 'full' : fillPct >= 70 ? 'warn' : '';
+%>
+<div id="fill-widget" class="panel" style="margin-top:var(--sp-6)">
+  <div class="panel-header">
+    <h2 class="panel-title">Remplissage — <code style="font-family:var(--font-mono);font-size:var(--text-base)"><%= currentTruck.plate %></code></h2>
+    <span class="lozenge <%= fillPct >= 90 ? 'lozenge-danger' : fillPct >= 70 ? 'lozenge-warning' : 'lozenge-success' %>">
+      <%= fillPct %>%
+    </span>
+  </div>
+  <div class="panel-body">
+    <div style="display:flex;align-items:center;gap:var(--sp-4);margin-bottom:var(--sp-4)">
+      <div class="progress-bar" style="flex:1;height:20px">
+        <div class="progress-fill <%= fillClass %>" style="width:<%= fillPct %>%"></div>
+      </div>
+      <span style="font-size:var(--text-xl);font-weight:700;color:<%= fillColor %>;min-width:48px;text-align:right">
+        <%= fillPct %>%
+      </span>
+    </div>
+    <p class="text-subtle text-sm" style="margin-bottom:var(--sp-4)">
+      Capacité : <%= currentTruck.capacity_t %> t —
+      <strong><%= (currentTruck.capacity_t * currentTruck.fill_level).toFixed(2) %> t</strong> chargées
+    </p>
+    <div class="form-group" style="margin-bottom:0">
+      <label class="form-label">Mettre à jour le remplissage</label>
+      <div style="display:flex;align-items:center;gap:var(--sp-3)">
+        <span class="text-subtle text-sm">0%</span>
+        <input type="range"
+               name="fill_level"
+               min="0" max="100"
+               value="<%= fillPct %>"
+               style="flex:1;accent-color:var(--color-brand);cursor:pointer;height:6px"
+               hx-post="/worker/truck/<%= currentTruck.id %>/fill"
+               hx-trigger="change"
+               hx-target="#fill-widget"
+               hx-swap="outerHTML">
+        <span class="text-subtle text-sm">100%</span>
+      </div>
+      <p class="form-hint" style="margin-top:var(--sp-2)">
+        Glissez le curseur après chaque collecte pour mettre à jour le niveau en temps réel.
+      </p>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,30 @@
+<%- include('../partials/auto-open-drawer', { autoOpen, drawerUrl: '/admin/complaints' }) %>
+
+<div class="panel">
+  <!-- Filtres HTMX -->
+  <div class="panel-header" style="flex-wrap:wrap;gap:var(--sp-3)">
+    <h2 class="panel-title">Réclamations</h2>
+    <form style="display:flex;gap:var(--sp-2);align-items:center;flex-wrap:wrap"
+          hx-get="/admin/complaints-fragment"
+          hx-target="#complaints-list"
+          hx-trigger="change from:select, submit"
+          hx-swap="innerHTML">
+      <select name="status" class="form-select filter-select">
+        <option value="">Tous statuts</option>
+        <option value="open"       <%= filters.status === 'open'       ? 'selected' : '' %>>Ouvertes</option>
+        <option value="processing" <%= filters.status === 'processing' ? 'selected' : '' %>>En cours</option>
+        <option value="closed"     <%= filters.status === 'closed'     ? 'selected' : '' %>>Clôturées</option>
+      </select>
+      <select name="district" class="form-select filter-select">
+        <option value="">Tous quartiers</option>
+        <% districts.forEach(d => { %>
+        <option value="<%= d.id %>" <%= filters.district == d.id ? 'selected' : '' %>><%= d.name %></option>
+        <% }) %>
+      </select>
+    </form>
+  </div>
+  <div id="complaints-list" class="table-scroll" style="padding:0">
+    <%- include('../partials/complaints-table', { complaints, hxConfig }) %>
+    <%- include('../partials/pagination', { currentPage, totalPages, total, baseParams, hxConfig }) %>
+  </div>
+</div>

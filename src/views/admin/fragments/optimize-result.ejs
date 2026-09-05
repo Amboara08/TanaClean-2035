@@ -1,0 +1,57 @@
+<%
+  const statusLoz = { planned:'lozenge-default', active:'lozenge-warning', done:'lozenge-success', cancelled:'lozenge-danger' };
+  const prioLabel = { 3:'Haute', 2:'Normale', 1:'Basse' };
+  const prioLoz   = { 3:'lozenge-danger', 2:'lozenge-warning', 1:'lozenge-default' };
+%>
+<% if (tours.length === 0) { %>
+<div class="alert alert-warning" style="display:flex;align-items:center;gap:var(--sp-3)">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/></svg>
+  Aucune tournée planifiée aujourd'hui à optimiser.
+</div>
+<% } else { %>
+<div class="panel">
+  <div class="panel-header">
+    <h2 class="panel-title">Ordre optimal — Algorithme glouton</h2>
+    <div style="display:flex;gap:var(--sp-2)">
+      <span class="lozenge lozenge-info"><%= totalTours %> tournée(s)</span>
+      <span class="lozenge lozenge-default"><%= sectorCount %> secteur(s) connexe(s)</span>
+    </div>
+  </div>
+  <div class="panel-body" style="padding:0">
+    <table class="aui-table">
+      <thead>
+        <tr>
+          <th style="width:40px">#</th>
+          <th>Quartier</th>
+          <th>Éboueur</th>
+          <th>Priorité</th>
+          <th>Distance dépôt</th>
+          <th>Score glouton</th>
+          <th>Heure planifiée</th>
+        </tr>
+      </thead>
+      <tbody>
+        <% tours.forEach(function(t, i) { %>
+        <tr>
+          <td style="font-weight:700;color:var(--color-brand)"><%= i + 1 %></td>
+          <td><strong><%= t.district_name %></strong></td>
+          <td><%= t.worker_name %></td>
+          <td><span class="lozenge <%= prioLoz[t.priority] || 'lozenge-default' %>"><%= prioLabel[t.priority] || '—' %></span></td>
+          <td class="text-sm"><%= t.distance < 900 ? t.distance + ' km' : 'N/A' %></td>
+          <td>
+            <span style="font-family:var(--font-mono);font-size:var(--text-sm);font-weight:700;color:var(--color-success)">
+              <%= t.score %>
+            </span>
+          </td>
+          <td class="text-subtle text-sm"><%= t.scheduled_at.slice(11,16) %></td>
+        </tr>
+        <% }) %>
+      </tbody>
+    </table>
+  </div>
+  <div style="padding:var(--sp-3) var(--sp-4);background:var(--color-brand-subtle);font-size:var(--text-sm);color:var(--color-brand);border-top:1px solid var(--color-border-light)">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align:middle;margin-right:4px"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>
+    Score = priorité / distance (Dijkstra depuis Analakely) · Union-Find détecte <%= sectorCount %> secteur(s) connexe(s)
+  </div>
+</div>
+<% } %>

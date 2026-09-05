@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>500 — TanaClean 2035</title>
+  <link rel="stylesheet" href="/css/tokens.css">
+  <link rel="stylesheet" href="/css/app.css">
+</head>
+<body>
+<div style="min-height:100vh;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:var(--sp-4);text-align:center;padding:var(--sp-8)">
+  <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="var(--color-danger)" stroke-width="1"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+  <h1 style="font-size:var(--text-2xl);color:var(--color-text)">Erreur serveur</h1>
+  <p style="color:var(--color-text-subtle)"><%= typeof message !== 'undefined' ? message : 'Une erreur interne s\'est produite.' %></p>
+  <a href="/" class="btn btn-primary">Retour à l'accueil</a>
+</div>
+</body>
+</html>

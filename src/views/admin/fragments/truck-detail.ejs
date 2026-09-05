@@ -1,0 +1,53 @@
+<%
+  const statusLoz   = { available:'lozenge-success', in_use:'lozenge-warning', maintenance:'lozenge-danger' };
+  const statusLabel = { available:'Disponible', in_use:'En service', maintenance:'Maintenance' };
+%>
+
+<div class="drawer-header">
+  <div>
+    <p class="drawer-eyebrow">Camion</p>
+    <h2 class="drawer-title"><code><%= truck.plate %></code></h2>
+  </div>
+  <div style="display:flex;align-items:center;gap:var(--sp-3)">
+    <span class="lozenge <%= statusLoz[truck.status] %>"><%= statusLabel[truck.status] %></span>
+    <button class="drawer-close" onclick="closeDrawer()" aria-label="Fermer">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+    </button>
+  </div>
+</div>
+
+<div class="drawer-body">
+  <% if (success) { %>
+  <div class="alert alert-success" style="margin-bottom:var(--sp-4)">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0"><polyline points="20 6 9 17 4 12"/></svg>
+    Camion mis à jour avec succès.
+  </div>
+  <% } %>
+
+  <form hx-post="/admin/trucks/<%= truck.id %>" hx-target="#drawer-content" hx-swap="innerHTML">
+    <div class="form-group">
+      <label class="form-label">Immatriculation</label>
+      <input type="text" name="plate" class="form-input" value="<%= truck.plate %>" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Capacité (tonnes)</label>
+      <input type="number" name="capacity_t" class="form-input" value="<%= truck.capacity_t %>" step="0.5" min="1" required>
+    </div>
+    <div class="form-group">
+      <label class="form-label">Statut</label>
+      <select name="status" class="form-select">
+        <option value="available"   <%= truck.status === 'available'   ? 'selected' : '' %>>Disponible</option>
+        <option value="in_use"      <%= truck.status === 'in_use'      ? 'selected' : '' %>>En service</option>
+        <option value="maintenance" <%= truck.status === 'maintenance' ? 'selected' : '' %>>Maintenance</option>
+      </select>
+    </div>
+    <div class="drawer-footer">
+      <button type="submit" class="btn btn-primary">Enregistrer</button>
+      <button type="button" class="btn btn-subtle" onclick="closeDrawer()">Annuler</button>
+      <form action="/admin/trucks/<%= truck.id %>/delete" method="POST" style="margin-left:auto"
+            onsubmit="return confirm('Supprimer le camion <%= truck.plate %> ?')">
+        <button type="submit" class="btn btn-link" style="color:var(--color-danger)">Supprimer</button>
+      </form>
+    </div>
+  </form>
+</div>

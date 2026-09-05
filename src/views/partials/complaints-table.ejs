@@ -1,0 +1,38 @@
+<%
+  const cl = { open:'lozenge-danger', processing:'lozenge-warning', closed:'lozenge-success' };
+  const ct = { open:'Ouverte', processing:'En cours', closed:'Clôturée' };
+%>
+<table class="aui-table">
+  <thead>
+    <tr><th>#</th><th>Citoyen</th><th>Quartier</th><th>Objet</th><th>Date</th><th>Statut</th><th>Actions</th></tr>
+  </thead>
+  <tbody>
+    <% if (complaints.length === 0) { %>
+    <tr><td colspan="7" style="text-align:center;color:var(--color-text-subtle);padding:var(--sp-5)">Aucune réclamation.</td></tr>
+    <% } %>
+    <% complaints.forEach(function(c) { %>
+    <tr hx-get="/admin/complaints/<%= c.id %>" hx-target="#drawer-content" hx-swap="innerHTML">
+      <td class="text-subtle text-sm">#<%= c.id %></td>
+      <td><%= c.citizen_name %></td>
+      <td><%= c.district_name %></td>
+      <td>
+        <% if (c.is_urgent) { %><span class="lozenge lozenge-urgent" style="margin-right:4px">Urgent</span><% } %>
+        <%= c.content.length > 70 ? c.content.slice(0,70) + '…' : c.content %>
+      </td>
+      <td class="text-subtle text-sm"><%= c.created_at.slice(0,10) %></td>
+      <td><span class="lozenge <%= cl[c.status] %>"><%= ct[c.status] %></span></td>
+      <td onclick="event.stopPropagation()">
+        <% if (c.status !== 'closed') { %>
+        <form action="/admin/complaints/<%= c.id %>/status" method="POST" style="display:inline">
+          <select name="status" onchange="this.form.submit()" class="form-select" style="width:110px;padding:4px 8px;font-size:var(--text-sm)">
+            <option value="open"       <%= c.status === 'open'       ? 'selected' : '' %>>Ouverte</option>
+            <option value="processing" <%= c.status === 'processing' ? 'selected' : '' %>>En cours</option>
+            <option value="closed"     <%= c.status === 'closed'     ? 'selected' : '' %>>Clôturée</option>
+          </select>
+        </form>
+        <% } %>
+      </td>
+    </tr>
+    <% }) %>
+  </tbody>
+</table>
