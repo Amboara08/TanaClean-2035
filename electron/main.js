@@ -2,8 +2,8 @@ const { app, BrowserWindow, nativeImage } = require('electron');
 const path = require('path');
 const http = require('http');
 
-const PORT     = 3132;   // desktop — séparé du serveur web (3131)
-const WEB_PORT = 3131;   // npm run dev
+const PORT     = 3132;   
+const WEB_PORT = 3131;   
 let mainWindow;
 
 // ── Nom de l'application ─────────────────────────────────────────────────────
