@@ -50,8 +50,6 @@ class MinHeap {
 /**
  *
  * @param {Map<number, Array<{to: number, weight: number}>>} graph
- *   Graphe sous forme de liste d'adjacence.
- *   Exemple : new Map([[1, [{to:2, weight:0.8}]], ...])
  *
  * @param {number} source  Nœud de départ
  * @param {number} target  Nœud d'arrivée
