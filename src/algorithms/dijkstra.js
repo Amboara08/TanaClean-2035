@@ -55,10 +55,7 @@ class MinHeap {
  * @param {number} target  Nœud d'arrivée
  *
  * @returns {{ distance: number|null, path: number[] }}
- *   distance : distance minimale en km (null si non atteignable)
- *   path     : tableau d'IDs de nœuds du chemin optimal
- *
- * Complexité : O((V + E) log V)
+
  */
 function dijkstra(graph, source, target) {
   const dist    = new Map();
