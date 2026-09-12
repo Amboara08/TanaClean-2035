@@ -15,8 +15,8 @@ const runMigrations  = require('./config/migrate');
 
 const app         = express();
 const PORT        = parseInt(process.env.PORT) || 3131;
-const IS_DESKTOP  = process.env.ELECTRON_APP === '1';   // lancé par Electron
-const BIND_HOST   = IS_DESKTOP ? '127.0.0.1' : '0.0.0.0'; // desktop = localhost seulement
+const IS_DESKTOP  = process.env.ELECTRON_APP === '1'; 
+const BIND_HOST   = IS_DESKTOP ? '127.0.0.1' : '0.0.0.0'; 
 
 // ── View engine ──────────────────────────────────────────────────────────────
 app.set('view engine', 'ejs');
