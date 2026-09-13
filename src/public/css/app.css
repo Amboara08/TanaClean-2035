@@ -1,8 +1,4 @@
-/* ============================================================
-   TanaClean 2035 — Styles globaux
-   ============================================================ */
 
-/* ── Reset & base ────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
 html, body {
@@ -27,9 +23,6 @@ html, body {
 .main-content { flex: 1; display: flex; flex-direction: column; overflow: hidden; min-width: 0; }
 .page-content { flex: 1; overflow-y: auto; padding: var(--sp-6); }
 
-/* ══════════════════════════════════════════════════════════
-   SIDEBAR
-   ══════════════════════════════════════════════════════════ */
 .sidebar {
   width: var(--sidebar-width);
   background: var(--sidebar-bg);
